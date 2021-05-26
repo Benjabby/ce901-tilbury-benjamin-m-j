@@ -9,6 +9,7 @@ import argparse
 import torch
 import shutil
 from functools import reduce
+from PIL import Image
 
 # Note, I use a slightly different convention when it comes to arguments that I find far more informative:
 # -x is for flags (i.e those requiring the form '[...] -x [...]')
@@ -121,6 +122,7 @@ def run_skyar(instance, args):
     if args.override:
         args.current_missing['sky masks default'] = 'all'
         args.current_missing['sky masks raw'] = 'all'
+
 
     if args.current_missing['sky masks default'] == 'none' and args.current_missing['sky masks raw'] == 'none':
         print("SkyAR         > ", "Skipping {}: Already complete".format(args.current_folder))

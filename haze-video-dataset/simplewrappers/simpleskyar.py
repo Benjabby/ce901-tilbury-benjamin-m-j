@@ -40,7 +40,6 @@ class SimpleSkyFilter():
         self.net_G.eval()
 
         self.in_size_w, self.in_size_h = 384,384
-        self.out_size_w, self.out_size_h = 1242,375
 
     def skymask_refinement(self, G_pred, img):
 
@@ -77,7 +76,7 @@ class SimpleSkyFilter():
 
         img_HD = cv2.cvtColor(img_HD, cv2.COLOR_BGR2RGB)
         img_HD = np.array(img_HD / 255., dtype=np.float32)
-        img_HD = cv2.resize(img_HD, (self.out_size_w, self.out_size_h))
+        #img_HD = cv2.resize(img_HD, outsize)
 
         return img_HD
 
