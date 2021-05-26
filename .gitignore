@@ -1,0 +1,6 @@
+haze-video-dataset/tests
+haze-video-dataset/prep_tools/*
+!haze-video-dataset/prep_tools/README.md
+haze-video-dataset/KITTI
+haze-video-dataset/DrivingStereo
+haze-video-dataset/LiDAR Augment Completion.psd
