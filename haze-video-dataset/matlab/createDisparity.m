@@ -1,0 +1,2 @@
+function disparity = createDisparity()
+end

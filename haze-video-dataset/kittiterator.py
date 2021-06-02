@@ -1,15 +1,15 @@
 import sys
-
+import hashlib
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import os
 import glob
 import argparse
-import torch
 import shutil
 from functools import reduce
 from PIL import Image
+from haze_utils import create_haze
 
 # Note, I use a slightly different convention when it comes to arguments that I find far more informative:
 # -x is for flags (i.e those requiring the form '[...] -x [...]')
@@ -48,9 +48,12 @@ parser.add_argument("-lea", help='Generate and save LEAStereo depth maps', actio
 parser.add_argument('--lea_path', type=str, default='./prep_tools/LEAStereo', metavar='str', help='LEAStereo repository path')
 parser.add_argument("-lea_verbose", help='Use verbose output for LEAStereo', action='store_true')
 
-# Masked Depth Map Generation arguments         [UNGUIDED DEPTH MAP + SKY MASK]
-#parser.add_argument("-masked_depth", help='Generate and save a masked depth map', action='store_true')
-#parser.add_argument('--masked_depth_source',type=str, default='mono2',choices=['mono2','manyd','both'], help='Which depth map to mask')
+# Haze Image Generation         [DEPTH MAP + SKY MASK]
+parser.add_argument("-haze", help='Generate hazy frames from KITTI sequences and depth maps', action='store_true')
+parser.add_argument('--haze_depth_type',type=str, default='manyd',choices=['mono2','manyd','lea'], help='Which depth map to use for haze generation')
+parser.add_argument("--haze_mask_type",type=str, default='double',choices=['normal','double','none'], help='Method of sky masking for haze generation')
+parser.add_argument("--haze_seed",type=int, default=0, help='Random seed for haze generation')
+parser.add_argument("-haze_verbose", help='Use verbose output for haze frame generation', action='store_true')
 #parser.add_argument('--masked_depth_mask',type=str, default='default',choices=['default','volume'], help='What sky mask should be used to mask a depth map')
 
 ############## [UNUSED]
@@ -112,9 +115,8 @@ def init_leastereo(args):
     
     return lea
 
-##def init_depth_masker(args):
-##    print("Depth Masker  > ","Initializing...")
-##    pass
+def init_haze(args):
+    return None
 
 # Component execution
 # should be executed in this order
@@ -224,8 +226,59 @@ def run_leastereo(instance, args):
         print("LEAStereo     > ","Predicting on {:d} of {:d} images in {}".format(len(miss),len(os.listdir(image_dir)),args.current_folder))
         instance.run_partial(image_dir, output_dir, args.current_drive, miss)    
 
-##def run_depth_masker(instance, args):
-##    pass
+def run_haze(instance, args):
+    seed = args.haze_seed ^ (int(hashlib.sha1(args.current_folder.encode("utf-8")).hexdigest(), 16) % (2**32))
+    seed = np.array(seed).astype(np.uint32)
+    np.random.seed(seed)
+    vis = np.random.uniform(low=0.1,high=1)
+    a0 = np.random.uniform(low=0.7,high=1)
+    a = np.array([a0,a0,a0])
+
+    out_dir = os.path.join(args.current_path,"haze")
+    os.makedirs(out_dir,exist_ok=True)
+
+    with open(os.path.join(args.current_path,"haze_props.txt"),'w') as f:
+        f.write(str(vis)+'\n')
+        f.write(str(a[0])+'\n')
+        f.write(str(a[1])+'\n')
+        f.write(str(a[2])+'\n')
+
+    if args.haze_depth_type=="mono2":
+        depth_dir = os.path.join(args.current_path, paths['depth maps mono'])
+        scale=1
+    elif args.haze_depth_type=="manyd":
+        depth_dir = os.path.join(args.current_path, paths['depth maps many'])
+        scale=6
+    else:
+        depth_dir = os.path.join(args.current_path, paths['depth maps lea'])
+        scale=1000
+
+    if args.haze_mask_type!="none":
+        mask_dir = os.path.join(args.current_path, paths['sky masks default'])
+    
+
+    image_dir = os.path.join(args.current_path,"image_02","data")
+    print("HazeGen     > ","Running {:d} images in {}".format(len(os.listdir(image_dir)),args.current_folder))
+
+    
+    img_names = os.listdir(image_dir)
+    img_names.sort()
+
+    for img_name in img_names:
+        
+        img_path = os.path.join(image_dir,img_name)
+        depth_path = os.path.join(depth_dir, img_name[:-4]+".mat")
+
+        out_path = os.path.join(out_dir, img_name)
+        
+        if args.haze_mask_type=="none":
+            create_haze(img_path,depth_path,out_path,a,vis,scale=scale)
+        else:
+            double = args.haze_mask_type=="double"
+            create_haze(img_path,depth_path,out_path,a,vis,mask_path=os.path.join(mask_dir,img_name),double_mask=double,depth_scale=scale)
+            
+
+    
 
 helper = {
     'init':{'skyar':init_skyar,
@@ -233,14 +286,16 @@ helper = {
 ##            'maskdepth':init_depth_masker,
             'manyd':init_manydepth,
             'mono2':init_monodepth,
-            'lea':init_leastereo},
+            'lea':init_leastereo,
+            'haze':init_haze},
     
     'run':{'skyar':run_skyar,
 ##           'volrefine':run_sky_mask_volume_refine,
 ##           'maskdepth':run_depth_masker,
            'manyd':run_manydepth,
            'mono2':run_monodepth,
-           'lea':run_leastereo}
+           'lea':run_leastereo,
+           'haze':run_haze}
     }
 
 paths = {}
@@ -265,15 +320,16 @@ clamped_range['lidar full aug']                = True
 def build_requirements_list(args):
 
     requirements = {m:False for m in all_maps}
-    requirements['sky masks default']           = args.sky_masks #or args.masked_depth
+    requirements['sky masks default']           = args.sky_masks or (args.haze and args.haze_mask_type!="none")
 ##    requirements['sky masks raw']                   = False
 ##    requirements['sky masks volume']                = False
-    requirements['depth maps mono']    = args.mono2 #or (args.masked_depth and (args.masked_depth_source != 'manyd'))
-    requirements['depth maps many']    = args.manyd #or (args.masked_depth and (args.masked_depth_source != 'mono2'))
-    requirements['depth maps lea']    = args.lea #or (args.masked_depth and (args.masked_depth_source != 'lea'))
+    requirements['depth maps mono']    = args.mono2 or (args.haze and args.haze_depth_type=="mono2")
+    requirements['depth maps many']    = args.manyd or (args.haze and args.haze_depth_type=="manyd")
+    requirements['depth maps lea']    = args.lea or (args.haze and args.haze_depth_type=="lea")
 ##    requirements['depth maps augmented']  = False
 ##    requirements['lidar sky aug']                 = False
 ##    requirements['lidar full aug']                = False
+    requirements['haze']                = args.haze
     
     missings = {}
 
@@ -316,10 +372,12 @@ def build_requirements_list(args):
 
         #print(folder_missings)
 
+
     #print(requirements)
     #print()
     fully_present = {m:False if args.override else reduce(lambda a, b: a and b, [v[m]=='none' for v in missings.values()], True) for m in all_maps}
     #print(fully_present)
+    
     components = []
     # The order in which these are added matters.
     if (requirements['sky masks default'] and not fully_present['sky masks default']) or (requirements['sky masks raw'] and not fully_present['sky masks raw']):
@@ -341,6 +399,8 @@ def build_requirements_list(args):
 ##        print("ManyDepth  > ", "Skipping as all ManyDepth depth maps present")
         
 
+    if (args.haze):
+        components.append('haze')
 
     return components, missings
 
@@ -355,6 +415,7 @@ if __name__ == '__main__':
         args.mono2_verbose = True
         args.manyd_verbose = True
         args.lea_verbose = True
+        args.haze_verbose = True
     
     components, missings = build_requirements_list(args)
 
