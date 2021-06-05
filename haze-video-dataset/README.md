@@ -43,6 +43,8 @@ Alternatively if on a UNIX machine you can run the [] script to download the req
 `simple_wrappers` contains wrappers to execute the aforementioned components, provided their repositories are present in `prep_tools`
 
 To replicate the generation of the haze video dataset as it exists at [??? wherever I can upload dataset ???], [SkyAR](https://github.com/jiupinjia/SkyAR) and [ManyDepth](https://github.com/nianticlabs/manydepth) must be cloned into `prep_tools`, then the following command should be run:
-`python kittierator.py -`
+
+`python kittierator.py -haze`
+
 This will generate and save sky masks (if not already present), depth maps (if not already present), hazy images and transmission for all raw KITTI sequences present in the `dataset` folder.
 Different seed values can be used to randomize the fog density and colour. 

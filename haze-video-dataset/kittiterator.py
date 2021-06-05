@@ -55,7 +55,7 @@ parser.add_argument("-lea_verbose", help='Use verbose output for LEAStereo', act
 parser.add_argument("-haze", help='Generate hazy frames from KITTI sequences and depth maps', action='store_true')
 parser.add_argument('--haze_depth_type',type=str, default='manyd',choices=['mono2','manyd','lea'], help='Which depth map to use for haze generation')
 parser.add_argument("--haze_mask_type",type=str, default='double',choices=['normal','double','none'], help='Method of sky masking for haze generation')
-parser.add_argument("--haze_seed",type=int, default=0, help='Random seed for haze generation')
+parser.add_argument("--seed",type=int, default=0, help='Random seed for haze generation')
 parser.add_argument("-haze_verbose", help='Use verbose output for haze frame generation', action='store_true')
 #parser.add_argument('--masked_depth_mask',type=str, default='default',choices=['default','volume'], help='What sky mask should be used to mask a depth map')
 
@@ -242,7 +242,7 @@ def run_leastereo(instance, args):
         instance.run_partial(image_dir, output_dir, args.current_drive, miss)    
 
 def run_haze(instance, args):
-    seed = args.haze_seed ^ (int(hashlib.sha1(args.current_folder.encode("utf-8")).hexdigest(), 16) % (2**32))
+    seed = args.seed ^ (int(hashlib.sha1(args.current_folder.encode("utf-8")).hexdigest(), 16) % (2**32))
     seed = np.array(seed).astype(np.uint32)
     np.random.seed(seed)
     vis = np.random.uniform(low=0.1,high=1)

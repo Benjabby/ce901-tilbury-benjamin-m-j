@@ -4,3 +4,4 @@ haze-video-dataset/prep_tools/*
 haze-video-dataset/KITTI
 haze-video-dataset/DrivingStereo
 haze-video-dataset/LiDAR Augment Completion.psd
+haze-video-dataset/__pycache__

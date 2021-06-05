@@ -1,6 +1,6 @@
 function [predImage, predT, predA] = dehazeFattal(img)
 
-NS = 256 ;
+NS = 64 ;
 N = NS * NS ;
 
 A = [0.8 0.8 0.9]' ;
@@ -55,9 +55,11 @@ end
 
 disp(size(I))
 
-[est_t est_l est_eta] = estimate(A,I) ;
+img = reshape(img,[],3);
 
-assignin("base", "fuckmatlab", I);
+[est_t est_l est_eta] = estimate(A,img) ;
+
+assignin("base", "fuckmatlab", est_t);
 
 est_t = reshape(est_t,NS,NS) ;
 est_l = reshape(est_l,NS,NS) ;
