@@ -6,8 +6,11 @@ import cv2
 import os
 import glob
 import argparse
+from argparse import RawDescriptionHelpFormatter
 import shutil
+import json
 from functools import reduce
+from datetime import datetime
 from PIL import Image
 from haze_utils import create_haze
 
@@ -16,16 +19,16 @@ from haze_utils import create_haze
 # --x is for option arguments (i.e. those requiring the form '[...] --x [operand] [...]')
 
 # General arguments
-parser = argparse.ArgumentParser(description='Iterates through KITTI dataset and does various things\n \
-                                 Note; I use a slightly different convention when it comes to arguments for simple scripts, that I find far more informative:\n \
-                                 Single dash { -x} is used for flags (i.e. "| -xxx | -yyy | -zzz |")\n \
-                                 Double dash {--x} is used for parameter arguments (i.e. "| --xxx 20 | --yyy something | --zzz something/else |")')
-parser.add_argument('--path', type=str, default='./KITTI/train', metavar='str', help='KITTI data path')
+parser = argparse.ArgumentParser(description='Iterates through KITTI dataset and does various things\n\
+Note; I use a slightly different convention when it comes to arguments for simple scripts, that I find far more informative:\n\
+Single dash { -x} is used for flags (i.e. "| -xxx | -yyy | -zzz |")\n\
+Double dash {--x} is used for parameter arguments (i.e. "| --xxx 20 | --yyy something | --zzz something/else |")', formatter_class=RawDescriptionHelpFormatter)
+parser.add_argument('--path', type=str, default='./KITTI', metavar='str', help='KITTI data path')
 #parser.add_argument('--ftype',type=str, default='both',choices=['img','mat','both'], help='Whether to save using images, matlab files or both')
 #parser.add_argument("-mat", help='If a required map is not found as an .mat file a new one will be generated instead of loading from an image', action='store_true')
 parser.add_argument("-clean", help='Deletes unnecessary KITTI files', action='store_true')
-parser.add_argument("-override", help='Replace any existing generated files', action='store_true')
-parser.add_argument("-skip_heatmaps", help="Don't Save KITTI style depth images for all depth maps", action='store_true')
+parser.add_argument("-override", help='Replace any existing masks or depth maps', action='store_true')
+parser.add_argument("-skip_heatmaps", help="Don't save KITTI style disparity images for any depth maps", action='store_true')
 parser.add_argument("-verbose", help='Run all components as verbose', action='store_true')
 
 # Sky Mask Generation arguments
@@ -85,6 +88,9 @@ parser.add_argument("-haze_verbose", help='Use verbose output for haze frame gen
 ## Component initializers
 def init_skyar(args):
     print("SkyAR         > ","Initializing...")
+    if not os.path.exists(args.skyar_path):
+        print("SkyAR         > ","FATAL ERROR: SkyAR repository not present. Please ensure SkyAR is cloned into the skyar_path ({})".format(args.skyar_path))
+        exit(0);
     from simplewrappers import SimpleSkyFilter
     skyar = SimpleSkyFilter(args)
     
@@ -96,6 +102,9 @@ def init_skyar(args):
 
 def init_monodepth(args):
     print("MonoDepth2    > ","Initializing...")
+    if not os.path.exists(args.mono2_path):
+        print("MonoDepth2    > ","FATAL ERROR: MonoDepth2 repository not present. Please ensure MonoDepth2 is cloned into the mono2_path ({})".format(args.mono2_path))
+        exit(0);
     from simplewrappers import SimpleMonoDepth2
     mono = SimpleMonoDepth2(args)
     
@@ -103,6 +112,9 @@ def init_monodepth(args):
 
 def init_manydepth(args):
     print("ManyDepth     > ","Initializing...")
+    if not os.path.exists(args.manyd_path):
+        print("ManyDepth     > ","FATAL ERROR: ManyDepth repository not present. Please ensure ManyDepth is cloned into the manyd_path ({})".format(args.manyd_path))
+        exit(0);
     from simplewrappers import SimpleManyDepth
     manyd = SimpleManyDepth(args)
     
@@ -110,6 +122,9 @@ def init_manydepth(args):
 
 def init_leastereo(args):
     print("LEAStereo     > ","Initializing...")
+    if not os.path.exists(args.lea_path):
+        print("ManyDepth     > ","FATAL ERROR: LEAStereo repository not present. Please ensure LEAStereo is cloned into the lea_path ({})".format(args.lea_path))
+        exit(0);
     from simplewrappers import SimpleLEAStereo
     lea = SimpleLEAStereo(args)
     
@@ -236,12 +251,18 @@ def run_haze(instance, args):
 
     out_dir = os.path.join(args.current_path,"haze")
     os.makedirs(out_dir,exist_ok=True)
+    os.makedirs(os.path.join(out_dir,"image"),exist_ok=True)
+    os.makedirs(os.path.join(out_dir,"transmission"),exist_ok=True)
 
-    with open(os.path.join(args.current_path,"haze_props.txt"),'w') as f:
-        f.write(str(vis)+'\n')
-        f.write(str(a[0])+'\n')
-        f.write(str(a[1])+'\n')
-        f.write(str(a[2])+'\n')
+    props = {}
+    props['visibility'] = vis
+    props['A'] = a.tolist()
+    props['depth_source'] = args.haze_depth_type
+    props['mask_type'] = args.haze_mask_type
+    props['gen_timestamp'] = datetime.now().isoformat()
+    
+    with open(os.path.join(out_dir,"props.json"),'w') as f:
+              json.dump(props,f)
 
     if args.haze_depth_type=="mono2":
         depth_dir = os.path.join(args.current_path, paths['depth maps mono'])
@@ -258,7 +279,7 @@ def run_haze(instance, args):
     
 
     image_dir = os.path.join(args.current_path,"image_02","data")
-    print("HazeGen     > ","Running {:d} images in {}".format(len(os.listdir(image_dir)),args.current_folder))
+    print("HazeGen     > ","Running on {:d} images in {}".format(len(os.listdir(image_dir)),args.current_folder))
 
     
     img_names = os.listdir(image_dir)
@@ -269,13 +290,13 @@ def run_haze(instance, args):
         img_path = os.path.join(image_dir,img_name)
         depth_path = os.path.join(depth_dir, img_name[:-4]+".mat")
 
-        out_path = os.path.join(out_dir, img_name)
+        #out_path = os.path.join(out_dir, img_name)
         
         if args.haze_mask_type=="none":
-            create_haze(img_path,depth_path,out_path,a,vis,scale=scale)
+            create_haze(img_path,depth_path,out_dir,img_name,a,vis,scale=scale)
         else:
             double = args.haze_mask_type=="double"
-            create_haze(img_path,depth_path,out_path,a,vis,mask_path=os.path.join(mask_dir,img_name),double_mask=double,depth_scale=scale)
+            create_haze(img_path,depth_path,out_dir,img_name,a,vis,mask_path=os.path.join(mask_dir,img_name),double_mask=double,depth_scale=scale)
             
 
     

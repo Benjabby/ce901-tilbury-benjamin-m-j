@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from scipy.io import loadmat
 
-def create_haze(img_path, depth_path, out_path, a, vis, mask_path=None, double_mask=True, depth_scale=1):
+def create_haze(img_path, depth_path, out_dir, name, a, vis, mask_path=None, double_mask=True, depth_scale=1):
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype(np.float32)/255.0
     depth = loadmat(depth_path)['depth']
     depth = depth[...,None]
@@ -27,6 +27,12 @@ def create_haze(img_path, depth_path, out_path, a, vis, mask_path=None, double_m
 
     if a.ndim < 3: a = a.reshape([1,1,3])
 
+    image_path = os.path.join(out_dir,"image",name)
+
     hazy = img*transmission+a*(1.0-transmission)
     hazy = (hazy*255).astype(np.uint8)
-    cv2.imwrite(out_path, hazy)
+    cv2.imwrite(image_path, hazy)
+
+    transmission = (transmission*65536).astype(np.uint16);
+    trans_path = os.path.join(out_dir,"transmission",name);
+    cv2.imwrite(trans_path, transmission)

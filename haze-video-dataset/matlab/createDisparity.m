@@ -1,2 +1,0 @@
-function disparity = createDisparity()
-end
