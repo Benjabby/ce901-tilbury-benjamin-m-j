@@ -58,7 +58,7 @@ parser.add_argument("-lea_verbose", help='Use verbose output for LEAStereo', act
 # Haze Image Generation         [DEPTH MAP + SKY MASK]
 parser.add_argument("-haze", help='Generate hazy frames from KITTI sequences and depth maps', action='store_true')
 parser.add_argument('--haze_depth_type',type=str, default='manyd',choices=['mono2','manyd','lea'], help='Which depth map to use for haze generation')
-parser.add_argument("--haze_mask_type",type=str, default='double',choices=['normal','double','none'], help='Method of sky masking for haze generation')
+parser.add_argument("--haze_mask_type",type=str, default='double',choices=['normal','double','none','improved'], help='Method of sky masking for haze generation')
 parser.add_argument("--seed",type=int, default=0, help='Random seed for haze generation')
 parser.add_argument("-haze_verbose", help='Use verbose output for haze frame generation', action='store_true')
 parser.add_argument("--haze_output", type=str, default='', metavar='str', help='Specify an alternate output for the generated haze files')
@@ -144,10 +144,11 @@ def init_haze(args):
 def run_skyar(instance, args):
     if args.override:
         args.current_missing['sky masks default'] = 'all'
+        args.current_missing['sky masks improved'] = 'all'
         args.current_missing['sky masks raw'] = 'all'
 
 
-    if args.current_missing['sky masks default'] == 'none' and args.current_missing['sky masks raw'] == 'none':
+    if args.current_missing['sky masks default'] == 'none' and args.current_missing['sky masks raw'] == 'none' and args.current_missing['sky masks improved'] == 'none':
         print("SkyAR         > ", "Skipping {}: Already complete".format(args.current_folder))
         return
 
@@ -156,6 +157,7 @@ def run_skyar(instance, args):
 
     os.makedirs(os.path.join(args.current_path,"sky_mask","raw","img"),exist_ok=True)
     os.makedirs(os.path.join(args.current_path,"sky_mask","default_refined","img"),exist_ok=True)
+    os.makedirs(os.path.join(args.current_path,"sky_mask","improved","img"),exist_ok=True)
     
     if (args.current_missing['sky masks default'] == 'none' and not args.current_missing['sky masks raw'] == 'none') or (not args.current_missing['sky masks default'] == 'all' and args.current_missing['sky masks raw'] == 'all'):
         miss = args.current_missing['sky masks raw']
@@ -280,8 +282,10 @@ def run_haze(instance, args):
         depth_dir = os.path.join(args.current_path, paths['depth maps lea'])
         scale=1000
 
-    if args.haze_mask_type!="none":
+    if args.haze_mask_type=="double" or args.haze_mask_type=="normal":
         mask_dir = os.path.join(args.current_path, paths['sky masks default'])
+    elif args.haze_mask_type=="improved":
+        mask_dir = os.path.join(args,current_path, paths['sky masks improved'])
     
 
     image_dir = os.path.join(args.current_path,"image_02","data")
@@ -329,6 +333,7 @@ helper = {
     }
 
 paths = {}
+paths['sky masks improved']              = os.path.join('sky_mask','improved','img')
 paths['sky masks default']              = os.path.join('sky_mask','default_refined','img')
 paths['sky masks raw']                  = os.path.join('sky_mask','raw','img')
 paths['sky masks volume']               = os.path.join('sky_mask','volume_refined','img')
@@ -350,7 +355,8 @@ clamped_range['lidar full aug']                = True
 def build_requirements_list(args):
 
     requirements = {m:False for m in all_maps}
-    requirements['sky masks default']           = args.sky_masks or (args.haze and args.haze_mask_type!="none")
+    requirements['sky masks default']           = args.sky_masks or (args.haze and (args.haze_mask_type=="normal" or args.haze_mask_type=="double"))
+    requirements['sky masks improved']           = args.sky_masks or (args.haze and args.haze_mask_type=="none")
 ##    requirements['sky masks raw']                   = False
 ##    requirements['sky masks volume']                = False
     requirements['depth maps mono']    = args.mono2 or (args.haze and args.haze_depth_type=="mono2")
