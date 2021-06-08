@@ -23,12 +23,16 @@ parser = argparse.ArgumentParser(description='Iterates through KITTI dataset and
 Note; I use a slightly different convention when it comes to arguments for simple scripts, that I find far more informative:\n\
 Single dash { -x} is used for flags (i.e. "| -xxx | -yyy | -zzz |")\n\
 Double dash {--x} is used for parameter arguments (i.e. "| --xxx 20 | --yyy something | --zzz something/else |")', formatter_class=RawDescriptionHelpFormatter)
-parser.add_argument('--path', type=str, default='./KITTI', metavar='str', help='KITTI data path')
+parser.add_argument('--path', type=str, default='./dataset', metavar='str', help='KITTI data path. This path should at minimum contain raw KITTI image sequences, but may also contain pre-generated sky masks and depth maps')
+#parser.add_argument('--out_path', type=str, default='', metavar='str', help='Provide an alternate path to output files to. Note that this output folder will replicate the folder structure of the raw KITTI dataset. It is highly recommended to keep this value the same as the "--path" directory.')
+
 #parser.add_argument('--ftype',type=str, default='both',choices=['img','mat','both'], help='Whether to save using images, matlab files or both')
 #parser.add_argument("-mat", help='If a required map is not found as an .mat file a new one will be generated instead of loading from an image', action='store_true')
+
 parser.add_argument("-clean", help='Deletes unnecessary KITTI files', action='store_true')
 parser.add_argument("-override", help='Replace any existing masks or depth maps', action='store_true')
 parser.add_argument("-skip_heatmaps", help="Don't save KITTI style disparity images for any depth maps", action='store_true')
+                    
 parser.add_argument("-verbose", help='Run all components as verbose', action='store_true')
 
 # Sky Mask Generation arguments
@@ -57,6 +61,8 @@ parser.add_argument('--haze_depth_type',type=str, default='manyd',choices=['mono
 parser.add_argument("--haze_mask_type",type=str, default='double',choices=['normal','double','none'], help='Method of sky masking for haze generation')
 parser.add_argument("--seed",type=int, default=0, help='Random seed for haze generation')
 parser.add_argument("-haze_verbose", help='Use verbose output for haze frame generation', action='store_true')
+parser.add_argument("--haze_output", type=str, default='', metavar='str', help='Specify an alternate output for the generated haze files')
+#parser.add_argument("-remove_intermediaries", help='Delete the intermediary files from', action='store_true')
 #parser.add_argument('--masked_depth_mask',type=str, default='default',choices=['default','volume'], help='What sky mask should be used to mask a depth map')
 
 ############## [UNUSED]
@@ -249,7 +255,7 @@ def run_haze(instance, args):
     a0 = np.random.uniform(low=0.7,high=1)
     a = np.array([a0,a0,a0])
 
-    out_dir = os.path.join(args.current_path,"haze")
+    out_dir = os.path.join(args.out_path,args.middle_path,"haze")
     os.makedirs(out_dir,exist_ok=True)
     os.makedirs(os.path.join(out_dir,"image"),exist_ok=True)
     os.makedirs(os.path.join(out_dir,"transmission"),exist_ok=True)
@@ -299,7 +305,10 @@ def run_haze(instance, args):
             create_haze(img_path,depth_path,out_dir,img_name,a,vis,mask_path=os.path.join(mask_dir,img_name),double_mask=double,depth_scale=scale)
             
 
-    
+##    if args.remove_intermediaries:
+##        print("HazeGen     > ","Removing intermediaries off {}".format(len(os.listdir(image_dir)),args.current_folder))
+##        shutil.rmtree(os.path.join(args.current_path,"depth"),ignore_errors=True)
+##        shutil.rmtree(os.path.join(args.current_path,"sky_mask"),ignore_errors=True)
 
 helper = {
     'init':{'skyar':init_skyar,
@@ -430,7 +439,14 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     data_path = args.path
+    if args.haze_output:
+        args.out_path = args.haze_output
+    else:
+        args.out_path = data_path
 
+    #args.remove_intermediaries &= args.haze
+    #args.skip_heatmaps |= args.remove_intermediaries
+    
     if args.verbose:
         args.sky_masks_verbose = True
         args.mono2_verbose = True
@@ -470,6 +486,7 @@ if __name__ == '__main__':
             if os.path.isfile(folder_path): continue
 
             args.current_path = folder_path
+            args.middle_path = os.path.join(drive,folder) # There's so much redundancy and poor planning in this script, but if I try and make this more consistent and logically planned out I will spend days and days doing so when I don't need to.
             args.current_folder = folder
             args.current_missing = missings[folder]
             
