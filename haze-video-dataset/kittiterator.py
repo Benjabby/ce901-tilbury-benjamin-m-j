@@ -285,7 +285,7 @@ def run_haze(instance, args):
     if args.haze_mask_type=="double" or args.haze_mask_type=="normal":
         mask_dir = os.path.join(args.current_path, paths['sky masks default'])
     elif args.haze_mask_type=="improved":
-        mask_dir = os.path.join(args,current_path, paths['sky masks improved'])
+        mask_dir = os.path.join(args.current_path, paths['sky masks improved'])
     
 
     image_dir = os.path.join(args.current_path,"image_02","data")
@@ -305,7 +305,7 @@ def run_haze(instance, args):
         if args.haze_mask_type=="none":
             create_haze(img_path,depth_path,out_dir,img_name,a,vis,scale=scale)
         else:
-            double = args.haze_mask_type=="double"
+            double = args.haze_mask_type!="normal"
             create_haze(img_path,depth_path,out_dir,img_name,a,vis,mask_path=os.path.join(mask_dir,img_name),double_mask=double,depth_scale=scale)
             
 

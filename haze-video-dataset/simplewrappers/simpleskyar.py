@@ -34,10 +34,18 @@ def special_guided(guide, target, radius, eps):
 
     q = mean_a * guide + mean_b;
 
-    qd = np.copy(q);
+    qd = np.copy(target)
     qd[q>mask]=1;
 
-    return q, qd
+    mean_t = window_sum(qd, radius) / avgDenom;
+    corr_gt = window_sum(guide * qd, radius) / avgDenom;
+    cov_gt = corr_gt - mean_g * mean_t;
+    a = cov_gt / (var_g + eps*10);
+    b = mean_t - a * mean_g;
+    mean_a = window_sum(a, radius) / avgDenom;
+    mean_b = window_sum(b, radius) / avgDenom;
+    q = mean_a * guide + mean_b;
+    return q
 
 
     
@@ -96,11 +104,11 @@ class SimpleSkyFilter():
     def skymask_improved_refinement(self, G_pred, img):
 
         r, eps = 20, 0.001
-        gray = np.mean(img, axis=-1)
+        #gray = np.mean(img, axis=-1)
         
-        basic, helper = special_guided(gray, G_pred, r, eps)
-        
-        refined_skymask, _ = special_guided(basic, helper, r, eps)
+        refined_skymask = special_guided(img[:,:,2], G_pred, r, eps)
+        #refined_skymask = guidedFilter(basic, helper, r, 0.01)
+        #refined_skymask, _ = special_guided(basic, helper, r, eps)
         
         return np.clip(refined_skymask, a_min=0, a_max=1)
 
