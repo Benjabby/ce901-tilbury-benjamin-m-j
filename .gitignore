@@ -1,7 +1,8 @@
 haze-video-dataset/tests
 haze-video-dataset/prep_tools/*
 !haze-video-dataset/prep_tools/README.md
-haze-video-dataset/dataset
+haze-video-dataset/dataset/*
+!haze-video-dataset/dataset/download_kitti.sh
 haze-video-dataset/DrivingStereo
 haze-video-dataset/LiDAR Augment Completion.psd
 haze-video-dataset/__pycache__
