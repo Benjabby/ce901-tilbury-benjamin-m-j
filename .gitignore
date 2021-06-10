@@ -6,4 +6,5 @@ haze-video-dataset/DrivingStereo
 haze-video-dataset/LiDAR Augment Completion.psd
 haze-video-dataset/__pycache__
 haze-video-dataset/temp
+dehaze-systems/tests
 guidedFilter.m

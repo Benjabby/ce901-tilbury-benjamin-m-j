@@ -1,4 +1,4 @@
-function [predImage, predT, predA, state] = dehazeZhu(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeZhu(img, ~, state)
     r = 15;
     beta = 1.0;
 % 	gfr = 60;
@@ -7,21 +7,25 @@ function [predImage, predT, predA, state] = dehazeZhu(img, ~, state)
     t0 = 0.05;
     [m, n, ~] = size(img);
     
+    tic;
     [dR, dP] = calVSMap(img, r);
     refineDR = fastGuidedFilterColor(img, dP, r, eps, r/4);
     
     tR = exp(-beta*refineDR);
-    tP = exp(-beta*dP);
-        
+    %tP = exp(-beta*dP);
+    
+    initialTime = toc;
+    tic;
     predA = estA(img, dR);
     predA = reshape(predA, [1,1,3]);
-    repAtmosphere = repmat(predA, m, n);
+    timeA = toc + initialTime;
     
+    tic;
+    repAtmosphere = repmat(predA, m, n);
     predT = max(tR, t0);
     maxTransmission = repmat(predT, [1, 1, 3]);
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
-
-    
+    timeImage = toc + initialTime;
 end
 
 function [outputRegion, outputPixel] = calVSMap(I, r)
@@ -141,57 +145,15 @@ sumImg(:, w-r+1:w) = repmat(im_cum(:, w), [1, r]) - im_cum(:, w-2*r:w-r-1);
 
 end
 
-
-% Must redo this to be more like the other systems
-function [ A ] = estA( img, Jdark)
-%ESTABYTRAN Summary of this function goes here
-
-
-% Estimate Airlight of image I
-
-    [h,w,c] = size(img);
-
-    % Compute number for 0.1% brightest pixels
-    n_bright = ceil(0.001*h*w); 
-    % Loc contains the location of the sorted pixels
-    [Y,Loc] = sort(Jdark(:));
-    
-    %column-stacked version of I 
-    Ics = reshape(img, h*w, 1, 3);
-    ix = img;
-    dx = Jdark(:);
-    
-    %init a matrix to store candidate airlight pixels
-    Acand = zeros(n_bright,1,3);
-    %init matrix to store largest norm airlight 
-    Amag = zeros(n_bright,1); 
-    
-    % Compute magnitudes of RGB vectors of A
-    for i = 1:n_bright
-        x = Loc(h*w+1-i);
-        %ix(mod(x,h)+1, floor(x/w)+1, 1) = 1;
-        %ix(mod(x,h)+1, floor(x/w)+1, 2) = 0;
-        %ix(mod(x,h)+1, floor(x/w)+1, 3) = 0;
-        ix(mod(x,h)+1, floor(x/h)+1, 1) = 1;
-        ix(mod(x,h)+1, floor(x/h)+1, 2) = 0;
-        ix(mod(x,h)+1, floor(x/h)+1, 3) = 0;
-        %Jdark(mod(x,h), floor(x/w)+1);
-        %dx(x);
-
-       Acand(i,1,:) = Ics(Loc(h*w+1-i),1,:);
-       Amag(i) = norm(Acand(i,:)); 
-    end
-    
-    % Sort A magnitudes
-    [Y2,Loc2] = sort(Amag(:));
-    % A now stores the best estimate of the airlight
-    if length(Y2) > 20
-        A = Acand(Loc2(n_bright-19:n_bright),:); 
-    else
-        A = Acand(Loc2(n_bright-length(Y2)+1:n_bright),:); 
-    end
-    % finds the max of the 20 brightest pixels in original image
-    if size(A,1)~=1
-        A = max(A);     
-    end
+function [ A ] = estA(img, Jdark)
+    [m, n, ~] = size(img);
+    nPixels = m * n;
+    nSearchPixels = ceil(nPixels * 0.001);
+    darkVec = reshape(Jdark, nPixels, 1);
+    imageVec = reshape(img, nPixels, 3);
+    [~,ind] = maxk(darkVec, nSearchPixels);
+    topA = imageVec(ind,:);
+    norms = sqrt(sum(topA.^2,2));
+    [~, top] = max(norms);
+    A = topA(top,:);
 end

@@ -1,4 +1,4 @@
-function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeHe(img, ~, state)
     omega = 0.95;
     win_size = 15;
     
@@ -7,6 +7,7 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     t0 = 0.1;
     [m, n, ~] = size(img);
 
+    tic;
     darkChannel = min(img,[],3);
     se = strel('square',win_size);
     darkChannel = imerode(darkChannel,se);
@@ -19,6 +20,7 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     [~,ind] = maxk(darkVec, nSearchPixels);
     predA = mean(imageVec(ind,:),1);
     predA = reshape(predA, [1, 1, 3]);
+    timeA = toc;
     
     repAtmosphere = repmat(predA, m, n);
     normed = img ./ repAtmosphere;
@@ -34,6 +36,7 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     maxTransmission = repmat(predT, [1, 1, 3]);
     
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
+    timeImage = toc;
 end
 
 

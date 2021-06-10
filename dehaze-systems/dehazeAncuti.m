@@ -1,4 +1,5 @@
-function [predImage, predT, predA, state] = dehazeAncuti(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeAncuti(img, ~, state)
+    tic;
     inputA = whiteBalance(img);
     inputB = enhanceContrast(img);
     
@@ -11,7 +12,7 @@ function [predImage, predT, predA, state] = dehazeAncuti(img, ~, state)
 
     gaussianPyramidA = genPyr(weightA,'gauss',5);
     gaussianPyramidB = genPyr(weightB,'gauss',5);
-    
+   
     fusedPyramid = cell(1,5);
     for i = 1 : 5
         tempImg = [];
@@ -25,10 +26,11 @@ function [predImage, predT, predA, state] = dehazeAncuti(img, ~, state)
         fusedPyramid{i} = tempImg;
     end
 
-    predImage = pyrReconstruct(fusedPyramid);
+    predImage = pyrReconstruct(fusedPyramid);    
+    timeImage = toc;
     predT = 0;
     predA = 0;
-
+    timeA = -1;
 end
 
 function [ whiteBalanced ] = whiteBalance( im )
