@@ -1,4 +1,4 @@
-function results = evaluateDehaze(path, subset, systems)
+function results = evaluateDehaze(path, subset, systems, metrics)
     warning('on','all');
     if ~exist('path','var'), path = fullfile(mfilename('fullpath'),"..","..","haze-video-dataset","dataset"); end
 
@@ -27,8 +27,26 @@ function results = evaluateDehaze(path, subset, systems)
     end
     
     results.names = string(fieldnames(systems))';
-    results.metrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "ic" "tcm" "btcm" "TError"];
+    results.names(strcmp(results.names,"prepped")) = [];
     
+    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "ic" "tcm" "btcm" "TError"];
+    
+    if ~exist('metrics','var')
+        results.metrics = allMetrics;
+    else
+        removals = {}
+        for i = 1:length(metrics)
+            metric = metrics(i);
+            if ~any(strcmp(allMetrics,metric))
+                warning("Unknown metric '%s' found in 'metrics'. Removing...",metric);
+                removals{end+1} = i;
+            end
+        end
+        for i = 1:length(removals)
+            metrics(removals{i}) = [];
+        end
+        results.metrics = metrics;
+    end
     dateFolders = dir(path);
     dateFolders = dateFolders([dateFolders.isdir]);
     for i = 3:length(dateFolders)

@@ -10,6 +10,7 @@ function totals = calcTotals(results)
     totalSample = 0;
     
     for seq = string(fieldnames(results))'
+        if seq == "names" || seq == "metrics", continue; end
         sample = results.(seq).frames;
         totalSample = totalSample + sample;
         for name = results.names
