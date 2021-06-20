@@ -1,11 +1,13 @@
 function results = evaluateDehaze(path, subset, systems, metrics)
     warning('on','all');
-    if ~exist('path','var'), path = fullfile(mfilename('fullpath'),"..","..","haze-video-dataset","dataset"); end
-
+    if ~exist('path','var'), path = fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","dataset"); end
+    
     if ~exist('subset','var')
-       % To do. Load default subset file 
-       % For now set to 'all'
-       subset = "all";
+       fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
+       S = textscan(fid,"%s");
+       subset = string(S{1});
+       fclose(fid);
+       clearvars fid S;
     end
 
     if ~exist('systems','var')
@@ -61,13 +63,14 @@ function results = evaluateDehaze(path, subset, systems, metrics)
         
         sequenceFolders = dir(datePath);
         sequenceFolders = sequenceFolders([sequenceFolders.isdir]);
-        if subset~="all"
-            % do subset
-        end
         
         for j = 3:length(sequenceFolders)
             sequenceName = sequenceFolders(j).name;
             sequencePath = fullfile(datePath, sequenceName);
+            
+            if subset~="all"
+                if ~any(strcmp(subset,sequenceName)), continue;  end
+            end
             
             fid = fopen(fullfile(sequencePath,'haze','props.json'));
             if fid<0
