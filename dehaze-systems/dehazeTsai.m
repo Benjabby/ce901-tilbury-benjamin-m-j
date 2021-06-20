@@ -9,7 +9,7 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTsai(img, ~,
     t0 = 0.1;
     omega = 0.95;
     
-    tic;
+    ATic = tic;
     gray = rgb2gray(img);
     mask = gray>=AThresh;
     At = ones(1,1,3);
@@ -21,24 +21,24 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTsai(img, ~,
     At(:,:,3) = mean(green(mask));
     
     
-    if isempty(state)
+    if ~exist('state','var') || isempty(fieldnames(state))
         predA = At;
     else
         Ap = state.Ap;
         
-        if norm(Ap-At)>ADiffThresh
+        if norm(squeeze(Ap-At))>ADiffThresh
             predA = Ap;
         else
             predA = Ap.*AUpdate + (1-AUpdate).*At;
         end
     end
-    timeA = toc;
+    timeA = toc(ATic);
     
     state.Ap = predA;
     
     [m, n, ~] = size(img);
     
-    tic;
+    predTic = tic;
     se = strel('square',r);
     repAtmosphere = repmat(predA, m, n);
     %normed = img ./ repAtmosphere;
@@ -77,7 +77,7 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTsai(img, ~,
     
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
     
-    timeImage = toc;
+    timeImage = toc(predTic);
 end
 
 

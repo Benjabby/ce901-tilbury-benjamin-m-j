@@ -1,11 +1,10 @@
-%
+
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeTarel(img, knowns, state)
 % 17/11/2009
 % Author: J.-P. Tarel
 % LCPC-INRETS-IFSTTAR copyright
 % completed in 06/03/2013, corrected in 08/03/2013
 % Modified by Benjamin Tilbury 03/06/2021
-
-function [predImage, predT, predA, timeImage, timeA, state] = dehazeTarel(img, knowns, state)
 
 sv = 15;
 p = 0.95;
@@ -18,7 +17,7 @@ minvd = 50.0;
 
 [dimy, dimx, ncol]=size(img);
 
-tic;
+predTic = tic;
 if (ncol==1) 
 	w=img; 
 	%nbo=img;
@@ -100,7 +99,7 @@ if (ncol==3)
 	end
 	nbr=mean(r,3);
 end
-assignin("base","nbr",nbr);
+%assignin("base","nbr",nbr);
 % final gamma correction 
 u=r.^(1.0/gfactor);
 
@@ -108,10 +107,9 @@ u=r.^(1.0/gfactor);
 mnbu=max(u(:));
 predImage=u./(1.0+(1.0-1.0/mnbu)*u);
 
-timeImage = toc;
-timeA = -1;
-
-predA = 0;
+timeImage = toc(predTic);
+timeA = [];
+predA = [];
 
 end
 

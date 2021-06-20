@@ -7,25 +7,26 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeZhu(img, ~, 
     t0 = 0.05;
     [m, n, ~] = size(img);
     
-    tic;
+    initialTic = tic;
     [dR, dP] = calVSMap(img, r);
     refineDR = fastGuidedFilterColor(img, dP, r, eps, r/4);
     
     tR = exp(-beta*refineDR);
     %tP = exp(-beta*dP);
     
-    initialTime = toc;
-    tic;
+    initialTime = toc(initialTic);
+    
+    ATic = tic;
     predA = estA(img, dR);
     predA = reshape(predA, [1,1,3]);
-    timeA = toc + initialTime;
+    timeA = toc(ATic) + initialTime;
     
-    tic;
+    predTic = tic;
     repAtmosphere = repmat(predA, m, n);
     predT = max(tR, t0);
     maxTransmission = repmat(predT, [1, 1, 3]);
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
-    timeImage = toc + initialTime;
+    timeImage = toc(predTic) + initialTime;
 end
 
 function [outputRegion, outputPixel] = calVSMap(I, r)

@@ -1,5 +1,5 @@
 function [predImage, predT, predA, timeImage, timeA, state] = dehazeAncuti(img, ~, state)
-    tic;
+    predTic = tic;
     inputA = whiteBalance(img);
     inputB = enhanceContrast(img);
     
@@ -27,10 +27,10 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeAncuti(img, 
     end
 
     predImage = pyrReconstruct(fusedPyramid);    
-    timeImage = toc;
-    predT = 0;
-    predA = 0;
-    timeA = -1;
+    timeImage = toc(predTic);
+    predT = [];
+    predA = [];
+    timeA = [];
 end
 
 function [ whiteBalanced ] = whiteBalance( im )
