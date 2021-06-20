@@ -8,5 +8,4 @@ haze-video-dataset/__pycache__
 haze-video-dataset/temp
 dehaze-systems/tests
 dehaze-evaluation/vids
-dehaze-evaluation/results.mat
 *.asv

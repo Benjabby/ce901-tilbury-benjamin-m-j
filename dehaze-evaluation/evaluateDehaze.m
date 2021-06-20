@@ -30,7 +30,7 @@ function results = evaluateDehaze(path, subset, systems, metrics)
     results.names(strcmp(results.names,"prepped")) = [];
     
     allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "ic" "tcm" "btcm" "TError"];
-    
+    % TODO Properly include only required metrics when calculating
     if ~exist('metrics','var')
         results.metrics = allMetrics;
     else
