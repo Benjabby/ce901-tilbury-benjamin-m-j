@@ -1,11 +1,10 @@
-%
+
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeTarel(img, knowns, state)
 % 17/11/2009
 % Author: J.-P. Tarel
 % LCPC-INRETS-IFSTTAR copyright
 % completed in 06/03/2013, corrected in 08/03/2013
 % Modified by Benjamin Tilbury 03/06/2021
-
-function [predImage, predT, predA, state] = dehazeTarel(img, knowns, state)
 
 sv = 15;
 p = 0.95;
@@ -18,20 +17,21 @@ minvd = 50.0;
 
 [dimy, dimx, ncol]=size(img);
 
+predTic = tic;
 if (ncol==1) 
 	w=img; 
-	nbo=img;
+	%nbo=img;
 end
 if (ncol==3) 
 	if (balance==0.0) % global white balance on clear pixels
 		w=min(img,[],3); 
-		ival = quantile(w(:),[.99])
+		ival = quantile(w(:),[.99]);
 		[rind,cind]=find(w>=ival);
 		sel(:,1)=img(sub2ind(size(img),rind,cind,ones(size(rind))));
 		sel(:,2)=img(sub2ind(size(img),rind,cind,2*ones(size(rind))));
 		sel(:,3)=img(sub2ind(size(img),rind,cind,3*ones(size(rind))));
 		white=mean(sel,1);
-		white=white./max(white)
+		white=white./max(white);
 		img(:,:,1)=img(:,:,1)./white(1);
 		img(:,:,2)=img(:,:,2)./white(2);
 		img(:,:,3)=img(:,:,3)./white(3);
@@ -54,7 +54,7 @@ if (ncol==3)
 	end
 	% compute photometric bound
 	w=min(img,[],3); 
-	nbo=mean(img,3);
+	%nbo=mean(img,3);
 end
 
 % compute saturation bound
@@ -99,7 +99,7 @@ if (ncol==3)
 	end
 	nbr=mean(r,3);
 end
-assignin("base","nbr",nbr);
+%assignin("base","nbr",nbr);
 % final gamma correction 
 u=r.^(1.0/gfactor);
 
@@ -107,7 +107,9 @@ u=r.^(1.0/gfactor);
 mnbu=max(u(:));
 predImage=u./(1.0+(1.0-1.0/mnbu)*u);
 
-predA = 0;
+timeImage = toc(predTic);
+timeA = [];
+predA = [];
 
 end
 

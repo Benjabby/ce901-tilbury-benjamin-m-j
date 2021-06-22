@@ -1,4 +1,4 @@
-function [predImage, predT, predA, state] = dehazeTsai(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeTsai(img, ~, state)
     AThresh = 0.85;
     skyThresh = 0.6;
     skyLim = 0.3;
@@ -8,18 +8,10 @@ function [predImage, predT, predA, state] = dehazeTsai(img, ~, state)
     eps = 0.001;
     t0 = 0.1;
     omega = 0.95;
-    gray = rgb2gray(img);
     
-   
+    ATic = tic;
+    gray = rgb2gray(img);
     mask = gray>=AThresh;
-    % Sorry, but I hate matlab sometimes. You should be able to just do
-    % img(mask,:) to get an x by 3 array. But no. You have to do it all
-    % individually because you cant do partial logical indexing. 
-    % If you do mask = repmat(mask,1,1,3) and index using that,
-    % it removes the third dimension structure of the resultant array.
-    % Seriously matlab, what are you doing. predA should be as easy as:
-    % predA = mean(img(mask,:),[1 2]); with some 'keep dimensions' flag.
-    % But nooooooo, it has to be overcomplicated.
     At = ones(1,1,3);
     red = img(:,:,1);
     blue = img(:,:,2);
@@ -29,22 +21,24 @@ function [predImage, predT, predA, state] = dehazeTsai(img, ~, state)
     At(:,:,3) = mean(green(mask));
     
     
-    if isempty(state)
+    if ~exist('state','var') || isempty(fieldnames(state))
         predA = At;
     else
         Ap = state.Ap;
         
-        if norm(Ap-At)>ADiffThresh
+        if norm(squeeze(Ap-At))>ADiffThresh
             predA = Ap;
         else
             predA = Ap.*AUpdate + (1-AUpdate).*At;
         end
     end
+    timeA = toc(ATic);
     
     state.Ap = predA;
     
     [m, n, ~] = size(img);
-
+    
+    predTic = tic;
     se = strel('square',r);
     repAtmosphere = repmat(predA, m, n);
     %normed = img ./ repAtmosphere;
@@ -82,6 +76,8 @@ function [predImage, predT, predA, state] = dehazeTsai(img, ~, state)
     maxTransmission = repmat(predT, [1, 1, 3]);
     
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
+    
+    timeImage = toc(predTic);
 end
 
 

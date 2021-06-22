@@ -1,4 +1,4 @@
-function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeHe(img, ~, state)
     omega = 0.95;
     win_size = 15;
     
@@ -6,6 +6,8 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     res = 0.001;
     t0 = 0.1;
     [m, n, ~] = size(img);
+
+    ATic = tic;
 
     darkChannel = min(img,[],3);
     se = strel('square',win_size);
@@ -19,7 +21,9 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     [~,ind] = maxk(darkVec, nSearchPixels);
     predA = mean(imageVec(ind,:),1);
     predA = reshape(predA, [1, 1, 3]);
+    timeA = toc(ATic);
     
+    predTic = tic;
     repAtmosphere = repmat(predA, m, n);
     normed = img ./ repAtmosphere;
     darkChannel = min(normed,[],3);
@@ -34,6 +38,27 @@ function [predImage, predT, predA, state] = dehazeHe(img, ~, state)
     maxTransmission = repmat(predT, [1, 1, 3]);
     
     predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
+    timeImage = toc(predTic);
+end
+
+function A = smoothAtmLight(img, alpha, low)
+    if ~exist('alpha','var'), alpha = 10; end
+    if ~exist('low','var'), low = 0.1; end
+    
+%     B = min(img,[],3);
+% %     B = max(B,low);
+%     E = exp(img*alpha);
+%     A = E./sum(E,[1 2]);
+%     A = sum(A.*img, [1 2]);
+% %     [m, n, ~] = size(img);
+%     A = reshape(A, [1 1 3]);
+   
+    E = exp(img*alpha);
+    A = E./sum(E,[1 2]);
+    A = sum(A.*img, [1 2]);
+    B = max(img,[],3);
+    %B = max(B,low);
+    A = A./B;
 end
 
 
