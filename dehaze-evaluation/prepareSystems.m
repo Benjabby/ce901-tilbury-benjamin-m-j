@@ -33,7 +33,7 @@ function systems = prepareSystems(systems)
         try
             [predImage, predT, predA, timeImage, timeA, state] = sysFunc(dummyImg,dummyKnowns,state);
         catch err
-            warning("System %s%s produced the following error. Removing from systems.\n\n%s",name,strtrim(mlreportgen.utils.toString(sysFunc)),err.msgtext)
+            warning("System %s%s produced the following error. Removing from systems.\n\n%s",name,strtrim(mlreportgen.utils.toString(sysFunc)),err.message)
             removals{end+1} = name;
             continue
         end
@@ -55,7 +55,7 @@ function systems = prepareSystems(systems)
             try
                 [predImage, predT, predA, timeImage, timeA, state] = sysFunc(dummyImg,dummyKnowns,state);
             catch err
-                warning("System %s%s produced the following error. Removing from systems.\n\n%s",name,strtrim(mlreportgen.utils.toString(sysFunc)),err.msgtext)
+                warning("System %s%s produced the following error. Removing from systems.\n\n%s",name,strtrim(mlreportgen.utils.toString(sysFunc)),err.message)
                 isError = true;
                 break
             end

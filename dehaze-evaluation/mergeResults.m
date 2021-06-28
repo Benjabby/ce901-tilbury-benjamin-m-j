@@ -26,8 +26,10 @@ function results = mergeResults(original, new, replace)
     
     for seq = string(fieldnames(new))'
         if seq=="names" || seq=="metrics", continue; end
+        original.(seq).frames = new.(seq).frames;
+        original.(seq).visibility = new.(seq).visibility;
+        original.(seq).megapixels = new.(seq).megapixels;
         for name = new.names
-            if name=="frames" || name=="megapixels" || name=="visibility", continue; end
             for metric = new.metrics
                if replace || ~(isfield(original,seq) && isfield(original.(seq),name) && isfield(original.(seq).(name),metric))
                    original.(seq).(name).(metric) = new.(seq).(name).(metric);
@@ -36,7 +38,7 @@ function results = mergeResults(original, new, replace)
         end
     end
     original.names      = union(original.names, new.names);
-    original.metrics    = union(original.metrics, new.names);
+    original.metrics    = union(original.metrics, new.metrics);
     
     results = original;
 end

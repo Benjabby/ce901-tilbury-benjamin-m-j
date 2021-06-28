@@ -1,5 +1,5 @@
 function saveVideos(sequencePath, outPath, calib, systems)
-    if ~exist('systems','var')
+    if ~exist('systems','var') || isempty(systems)
         systems = defaultSystems();
     elseif length(fieldnames(systems))<2 || ~isfield(systems,'prepped') || ~systems.prepped
         isHandles = true;
@@ -21,6 +21,7 @@ function saveVideos(sequencePath, outPath, calib, systems)
         if name == "prepped", continue; end
         writers.(name) = VideoWriter(fullfile(outPath,name+".mp4"),"MPEG-4");
         writers.(name).FrameRate = 10;
+        writers.(name).Quality = 100;
         open(writers.(name));
     end
     

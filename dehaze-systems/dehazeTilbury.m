@@ -1,26 +1,26 @@
 function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img, ~, state)
     omega = 0.95;
-    win_size = 15;
     alpha = 20;
+    sp = 1.5;
     r = 15;
     t0 = 0.01;
     [m, n, ~] = size(img);
 
     ATic = tic;
-    predA = smoothAtmLight(img);
+%     predA = smoothAtmLight(img);
 
-%     darkChannel = min(img,[],3);
-%     se = strel('square',win_size);
-%     darkChannel = imerode(darkChannel,se);
-%     
-%     nPixels = m * n;
-% 
-%     nSearchPixels = floor(nPixels * 0.01);
-%     darkVec = reshape(darkChannel, nPixels, 1);
-%     imageVec = reshape(img, nPixels, 3);
-%     [~,ind] = maxk(darkVec, nSearchPixels);
-%     predA = mean(imageVec(ind,:),1);
-%     predA = reshape(predA, [1, 1, 3]);
+    darkChannel = min(img,[],3);
+    se = strel('square',r);
+    darkChannel = imerode(darkChannel,se);
+    
+    nPixels = m * n;
+
+    nSearchPixels = floor(nPixels * 0.01);
+    darkVec = reshape(darkChannel, nPixels, 1);
+    imageVec = reshape(img, nPixels, 3);
+    [~,ind] = maxk(darkVec, nSearchPixels);
+    predA = mean(imageVec(ind,:),1);
+    predA = reshape(predA, [1, 1, 3]);
     
     timeA = toc(ATic);
     
@@ -32,10 +32,16 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img,
     end
     normed = img ./ repeatedA;
     darkChannel = min(normed,[],3);
+    lightChannel = max(normed,[],3);
     
-    se = strel('square',win_size);
+    se = strel('square',r);
     ero = imerode(darkChannel,se);
     dil = imdilate(darkChannel,se);
+    
+    sat = (lightChannel-darkChannel)./lightChannel;
+    sat = imdilate(sat,se);
+    sat = 1-sat;
+    darkChannel = min(darkChannel,sat.^sp);
     
     V = alpha*(dil-ero);
     expD = exp(-V.*darkChannel);
@@ -44,7 +50,7 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img,
     
     denom = windowSumFilter(expD,r);
     darkChannel = windowSumFilter(expD.*darkChannel,r)./denom;
-    darkChannel = darkChannel.^1.25;
+%     darkChannel = darkChannel.^1.25;
     predT = 1 - omega * darkChannel;
     %predT = predT.^0.8;
     
@@ -109,17 +115,4 @@ function A = smoothAtmLight(img, alpha, low)
 % %     B = max(B,low);
 %     A = A./B;
 % %     A = lrgb2srgb(A);
-end
-
-function I = srgb2lrgb(I0)
-    I = ((I0+0.055)/1.055).^(2.4);  
-    I(I0<=0.04045) = I0(I0<=0.04045)/12.92;
-end
-
-function I2 = lrgb2srgb(I1)
-    I2 = zeros(size(I1));
-    for k = 1:3
-        temp = I1(:,:,k);
-        I2(:,:,k) = 12.92*temp.*(temp<=0.0031308)+(1.055*temp.^(1/2.4)-0.055).*(temp>0.0031308);
-    end
 end

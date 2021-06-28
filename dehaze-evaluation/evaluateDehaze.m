@@ -1,16 +1,18 @@
-function results = evaluateDehaze(path, subset, systems, metrics)
+function results = evaluateDehaze(path, systems, metrics, subset)
     warning('on','all');
-    if ~exist('path','var'), path = fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","dataset"); end
+        
+    if ~exist('path','var') || isempty(path), path = fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","dataset"); end
     
-    if ~exist('subset','var')
+    if ~exist('subset','var') || isempty(subset)
        fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
        S = textscan(fid,"%s");
        subset = string(S{1});
        fclose(fid);
        clearvars fid S;
     end
+    
 
-    if ~exist('systems','var')
+    if ~exist('systems','var') || isempty(systems)
         systems = defaultSystems();
     elseif length(fieldnames(systems))<2 || ~isfield(systems,'prepped') || ~systems.prepped
         isHandles = true;
@@ -31,12 +33,12 @@ function results = evaluateDehaze(path, subset, systems, metrics)
     results.names = string(fieldnames(systems))';
     results.names(strcmp(results.names,"prepped")) = [];
     
-    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "ic" "tcm" "btcm" "TError"];
+    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "tcm" "btcm" "TError", "brisque", "piqe"];
     % TODO Properly include only required metrics when calculating
-    if ~exist('metrics','var')
+    if ~exist('metrics','var') || isempty(metrics)
         results.metrics = allMetrics;
     else
-        removals = {}
+        removals = {};
         for i = 1:length(metrics)
             metric = metrics(i);
             if ~any(strcmp(allMetrics,metric))
@@ -49,6 +51,13 @@ function results = evaluateDehaze(path, subset, systems, metrics)
         end
         results.metrics = metrics;
     end
+    
+    tempMetrics = results.metrics;
+    metrics = struct();
+    for metric = allMetrics
+        metrics.(metric) = any(strcmp(tempMetrics, metric));
+    end
+     
     dateFolders = dir(path);
     dateFolders = dateFolders([dateFolders.isdir]);
     for i = 3:length(dateFolders)
@@ -88,10 +97,8 @@ function results = evaluateDehaze(path, subset, systems, metrics)
             JSize = length(dir(JPath))-2;
             
             IPath = fullfile(sequencePath,'haze','image');
-%             ISize = length(dir(IPath))-2;
             
-            TPath = fullfile(sequencePath,'haze','transmission');
-%             TSize = length(dir(IPath))-2;
+            if metrics.TError, TPath = fullfile(sequencePath,'haze','transmission'); end
             
             
             seqStructStr = ['S' sequenceName(1:end-5)];
@@ -117,26 +124,32 @@ function results = evaluateDehaze(path, subset, systems, metrics)
                                 
                 if frameID==0
                     results.(seqStructStr).megapixels = (size(J,1)*size(J,2))/(10^6);
-                    runningSSIM_I = zeros(1,JSize-1);
-                    runningMeans.H = zeros(1,JSize);
-                    runningMeans.S = zeros(1,JSize);
-                    runningMeans.V = zeros(1,JSize);
+                    
+                    if metrics.btcm, runningSSIM_I = zeros(1,JSize-1); end
+                    if metrics.tcm,  runningSSIM_J = zeros(1,JSize-1); end
+                    
+                    if metrics.mic
+                        runningMeans.H = zeros(1,JSize);
+                        runningMeans.S = zeros(1,JSize);
+                        runningMeans.V = zeros(1,JSize);
+                    end
 %                     runningSSIM_J = zeros(1,JSize-1);
                 else
-                    runningSSIM_I(frameID) = evaluateSSIM(prevI,I);
-%                     runningSSIM_J(frameID) = evaluateSSIM(prevJ,J);
-%                     frameDiff = prevJ-J;
-                    corrJ = corrcoef(J,prevJ);
-                    corrJ = corrJ(1,2);
+                    if metrics.btcm, runningSSIM_I(frameID) = evaluateSSIM(prevI,I); end
+                    if metrics.tcm,  runningSSIM_J(frameID) = evaluateSSIM(prevJ,J);  end
                 end
                 
-                [hue, sat, val] = rgb2hsv(J);
-                runningMeans.H(frameID+1) = mean(hue,'all');
-                runningMeans.S(frameID+1) = mean(sat,'all');
-                runningMeans.V(frameID+1) = mean(val,'all');
-
-                trueT = imread(fullfile(TPath,framePath));
-                trueT = im2double(trueT);
+                if metrics.mic
+                    [hue, sat, val] = rgb2hsv(J);
+                    runningMeans.H(frameID+1) = mean(hue,'all');
+                    runningMeans.S(frameID+1) = mean(sat,'all');
+                    runningMeans.V(frameID+1) = mean(val,'all');
+                end
+                
+                if metrics.TError
+                    trueT = imread(fullfile(TPath,framePath));
+                    trueT = im2double(trueT);
+                end
                 
                 textwaitbar(frameID,JSize,sprintf("Evaluating on %s",seqStructStr))
                 
@@ -145,48 +158,49 @@ function results = evaluateDehaze(path, subset, systems, metrics)
                     
                     if frameID==0
                         
-                        sequenceTotals.(name).timeTotal    = 0;
+                        if metrics.mppsTotal, sequenceTotals.(name).timeTotal    = 0; end
                         
                         if systems.(name).predictsA
-                            sequenceTotals.(name).timeA    = 0;
-                            sequenceTotals.(name).AError   = 0;
+                            if metrics.mppsA, sequenceTotals.(name).timeA    = 0; end
+                            if metrics.AError, sequenceTotals.(name).AError   = 0; end
                         end
                             
-                        sequenceTotals.(name).timeImage    = 0;
+                        if metrics.mppsImage, sequenceTotals.(name).timeImage    = 0; end
                         
-                        sequenceTotals.(name).psnr         = 0;
-                        sequenceTotals.(name).ssim         = 0;
-                        sequenceTotals.(name).fade         = 0;
+                        if metrics.psnr, sequenceTotals.(name).psnr         = 0; end
+                        if metrics.ssim, sequenceTotals.(name).ssim         = 0; end
+                        if metrics.fade, sequenceTotals.(name).fade         = 0; end
                         
-                        sequenceTotals.(name).piqe         = 0;
-                        sequenceTotals.(name).brisque      = 0;
-                        sequenceTotals.(name).colDiff      = 0;
+                        if metrics.piqe, sequenceTotals.(name).piqe         = 0; end
+                        if metrics.brisque, sequenceTotals.(name).brisque      = 0; end
+                        if metrics.colDiff, sequenceTotals.(name).colDiff      = 0; end
                         
-                        sequenceTotals.(name).tcm          = 0;
-                        sequenceTotals.(name).runningSSIM  = zeros(1,JSize-1);
+                        if metrics.btcm || metrics.tcm, sequenceTotals.(name).runningSSIM  = zeros(1,JSize-1); end
                         
-                        sequenceTotals.(name).runningMeans.H = zeros(1,JSize);
-                        sequenceTotals.(name).runningMeans.S = zeros(1,JSize);
-                        sequenceTotals.(name).runningMeans.V = zeros(1,JSize);
+                        if metrics.mic
+                            sequenceTotals.(name).runningMeans.H = zeros(1,JSize);
+                            sequenceTotals.(name).runningMeans.S = zeros(1,JSize);
+                            sequenceTotals.(name).runningMeans.V = zeros(1,JSize);
+                        end
                     
-                        if systems.(name).predictsT
+                        if systems.(name).predictsT && metrics.TError
                            sequenceTotals.(name).TError    = 0;
                         end
-                        
-%                         if systems.(name).frameDelay > 1
-%                             sequenceTotals.JBuffer = zeros([size(J) systems.(name).frameDelay])
-%                             sequenceTotals.TBuffer = zeros([size(trueT) systems.(name).frameDelay])
-%                         end
                         
                         systems.(name).state = struct();
                     end
                     
                     totalTic = tic;
-                    [predImage, predT, predA, timeImage, timeA, systems.(name).state] = systems.(name).function(I,knowns,systems.(name).state);
+%                     try
+                        [predImage, predT, predA, timeImage, timeA, systems.(name).state] = systems.(name).function(I,knowns,systems.(name).state);
+%                     catch err
+%                         sprintf("Error for %s:\n%s", name, err.message);
+%                         continue
+%                     end
                     timeTotal = toc(totalTic);
                     
                     if frameID < systems.(name).frameDelay
-                        sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal;
+                        if metrics.mppsTotal, sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal; end
                         continue
                     end
                     
@@ -196,46 +210,40 @@ function results = evaluateDehaze(path, subset, systems, metrics)
                     
                     if systems.(name).frameDelay == 0
                         targetJ = J;
-                        targetT = trueT;
-                        if frameID ~= 0
-                            targetCorrJ = corrJ;
-                        end
+                        if metrics.TError, targetT = trueT; end
                     else
                         targetJ = prevJ;
-                        targetT = prevT;
-                        if frameID > systems.(name).frameDelay
-                            targetCorrJ = prevCorrJ;
-                        end
+                        if metrics.TError, targetT = prevT; end
                     end
                     
-                    sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal;
-                    sequenceTotals.(name).timeImage    = sequenceTotals.(name).timeImage      + timeImage;
+                    if metrics.mppsTotal, sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal; end
+                    if metrics.mppsImage, sequenceTotals.(name).timeImage    = sequenceTotals.(name).timeImage      + timeImage; end
                     
                     if systems.(name).predictsA
-                        sequenceTotals.(name).timeA    = sequenceTotals.(name).timeA          + timeA;
-                        sequenceTotals.(name).AError   = sequenceTotals.(name).AError         + evaluateAError(predA,trueA);
+                        if metrics.mppsA, sequenceTotals.(name).timeA    = sequenceTotals.(name).timeA          + timeA; end
+                        if metrics.AError, sequenceTotals.(name).AError   = sequenceTotals.(name).AError         + evaluateAError(predA,trueA); end
                     end
                     
-                    sequenceTotals.(name).psnr         = sequenceTotals.(name).psnr           + evaluatePSNR(predImage,targetJ);
-                    sequenceTotals.(name).ssim         = sequenceTotals.(name).ssim           + evaluateSSIM(predImage,targetJ);
-                    sequenceTotals.(name).fade         = sequenceTotals.(name).fade           + evaluateFADE(predImage);
+                    if metrics.psnr, sequenceTotals.(name).psnr         = sequenceTotals.(name).psnr           + evaluatePSNR(predImage,targetJ); end
+                    if metrics.ssim, sequenceTotals.(name).ssim         = sequenceTotals.(name).ssim           + evaluateSSIM(predImage,targetJ); end
+                    if metrics.fade, sequenceTotals.(name).fade         = sequenceTotals.(name).fade           + evaluateFADE(predImage); end
                     
-                    sequenceTotals.(name).piqe         = sequenceTotals.(name).piqe           + evaluatePIQE(predImage); 
-                    sequenceTotals.(name).brisque      = sequenceTotals.(name).brisque        + evaluateBRISQUE(predImage);
-                    sequenceTotals.(name).colDiff      = sequenceTotals.(name).colDiff        + evaluateColDiff(predImage,targetJ);
+                    if metrics.piqe, sequenceTotals.(name).piqe         = sequenceTotals.(name).piqe           + evaluatePIQE(predImage); end
+                    if metrics.brisque, sequenceTotals.(name).brisque      = sequenceTotals.(name).brisque        + evaluateBRISQUE(predImage); end
+                    if metrics.colDiff, sequenceTotals.(name).colDiff      = sequenceTotals.(name).colDiff        + evaluateColDiff(predImage,targetJ); end
                     
-                    if systems.(name).predictsT
+                    if systems.(name).predictsT && metrics.TError
                         sequenceTotals.(name).TError   = sequenceTotals.(name).TError         + evaluateTError(predT,targetT);
                     end
                     
-                    [hue,sat,val] = rgb2hsv(predImage);
+                    if metrics.mic
+                        [hue,sat,val] = rgb2hsv(predImage);
+                        sequenceTotals.(name).runningMeans.H(frameID+1-systems.(name).frameDelay) = mean(hue,'all');
+                        sequenceTotals.(name).runningMeans.S(frameID+1-systems.(name).frameDelay) = mean(sat,'all');
+                        sequenceTotals.(name).runningMeans.V(frameID+1-systems.(name).frameDelay) = mean(val,'all');
+                    end
                     
-                    sequenceTotals.(name).runningMeans.H(frameID+1-systems.(name).frameDelay) = mean(hue,'all');
-                    sequenceTotals.(name).runningMeans.S(frameID+1-systems.(name).frameDelay) = mean(sat,'all');
-                    sequenceTotals.(name).runningMeans.V(frameID+1-systems.(name).frameDelay) = mean(val,'all');
-                                        
-                    if frameID > systems.(name).frameDelay
-                        sequenceTotals.(name).tcm      = sequenceTotals.(name).tcm            + evaluateTCM(predImage, sequenceTotals.(name).prevPred, targetCorrJ);
+                    if frameID > systems.(name).frameDelay && (metrics.tcm || metrics.btcm)
                         sequenceTotals.(name).runningSSIM(frameID-systems.(name).frameDelay) = evaluateSSIM(sequenceTotals.(name).prevPred, predImage);
                     end
                     
@@ -244,10 +252,7 @@ function results = evaluateDehaze(path, subset, systems, metrics)
                 
                 prevJ = J;
                 prevI = I;
-                prevT = trueT;
-                if frameID>0
-                    prevCorrJ = corrJ;
-                end
+                if metrics.TError, prevT = trueT; end
             end
             textwaitbar(JSize,JSize,sprintf("Evaluating on %s",seqStructStr))
                 
@@ -260,74 +265,80 @@ function results = evaluateDehaze(path, subset, systems, metrics)
                 %% Deal with frame delay by passing in empty images
                 if systems.(name).frameDelay > 0
                     % Currently assuming delay of one
+                    
+                    [predImage, predT, predA, timeImage, timeA, systems.(name).state] = systems.(name).function([],knowns,systems.(name).state);
+
                     targetJ = J;
-                    targetT = trueT;
-                    targetCorrJ = corrJ;
-                        
-                    sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal;
-                    sequenceTotals.(name).timeImage    = sequenceTotals.(name).timeImage      + timeImage;
+                    if metrics.TError, targetT = trueT; end
+                    
+                    if metrics.mppsTotal, sequenceTotals.(name).timeTotal    = sequenceTotals.(name).timeTotal      + timeTotal; end
+                    if metrics.mppsImage, sequenceTotals.(name).timeImage    = sequenceTotals.(name).timeImage      + timeImage; end
                     
                     if systems.(name).predictsA
-                        sequenceTotals.(name).timeA    = sequenceTotals.(name).timeA          + timeA;
-                        sequenceTotals.(name).AError   = sequenceTotals.(name).AError         + evaluateAError(predA,trueA);
+                        if metrics.mppsA, sequenceTotals.(name).timeA    = sequenceTotals.(name).timeA          + timeA; end
+                        if metrics.AError, sequenceTotals.(name).AError   = sequenceTotals.(name).AError         + evaluateAError(predA,trueA); end
                     end
                     
-                    sequenceTotals.(name).psnr         = sequenceTotals.(name).psnr           + evaluatePSNR(predImage,targetJ);
-                    sequenceTotals.(name).ssim         = sequenceTotals.(name).ssim           + evaluateSSIM(predImage,targetJ);
-                    sequenceTotals.(name).fade         = sequenceTotals.(name).fade           + evaluateFADE(predImage);
+                    if metrics.psnr, sequenceTotals.(name).psnr         = sequenceTotals.(name).psnr           + evaluatePSNR(predImage,targetJ); end
+                    if metrics.ssim, sequenceTotals.(name).ssim         = sequenceTotals.(name).ssim           + evaluateSSIM(predImage,targetJ); end
+                    if metrics.fade, sequenceTotals.(name).fade         = sequenceTotals.(name).fade           + evaluateFADE(predImage); end
                     
-                    sequenceTotals.(name).piqe         = sequenceTotals.(name).piqe           + evaluatePIQE(predImage); 
-                    sequenceTotals.(name).brisque      = sequenceTotals.(name).brisque        + evaluateBRISQUE(predImage);
-                    sequenceTotals.(name).colDiff      = sequenceTotals.(name).colDiff        + evaluateColDiff(predImage,targetJ);
+                    if metrics.piqe, sequenceTotals.(name).piqe         = sequenceTotals.(name).piqe           + evaluatePIQE(predImage); end
+                    if metrics.brisque, sequenceTotals.(name).brisque      = sequenceTotals.(name).brisque        + evaluateBRISQUE(predImage); end
+                    if metrics.colDiff, sequenceTotals.(name).colDiff      = sequenceTotals.(name).colDiff        + evaluateColDiff(predImage,targetJ); end
                     
-                    if systems.(name).predictsT
+                    if systems.(name).predictsT && metrics.TError
                         sequenceTotals.(name).TError   = sequenceTotals.(name).TError         + evaluateTError(predT,targetT);
                     end
                     
-                    [hue,sat,val] = rgb2hsv(predImage);
+                    if metrics.mic
+                        [hue,sat,val] = rgb2hsv(predImage);
+                        sequenceTotals.(name).runningMeans.H(frameID+1-systems.(name).frameDelay) = mean(hue,'all');
+                        sequenceTotals.(name).runningMeans.S(frameID+1-systems.(name).frameDelay) = mean(sat,'all');
+                        sequenceTotals.(name).runningMeans.V(frameID+1-systems.(name).frameDelay) = mean(val,'all');
+                    end
                     
-                    sequenceTotals.(name).runningMeans.H(end) = mean(hue,'all');
-                    sequenceTotals.(name).runningMeans.S(end) = mean(sat,'all');
-                    sequenceTotals.(name).runningMeans.V(end) = mean(val,'all');
-                                        
-                    sequenceTotals.(name).tcm      = sequenceTotals.(name).tcm            + evaluateTCM(predImage, sequenceTotals.(name).prevPred, targetCorrJ);
-                    sequenceTotals.(name).runningSSIM(end) = evaluateSSIM(sequenceTotals.(name).prevPred, predImage);
+                    if frameID > systems.(name).frameDelay && (metrics.tcm || metrics.btcm)
+                        sequenceTotals.(name).runningSSIM(frameID-systems.(name).frameDelay) = evaluateSSIM(sequenceTotals.(name).prevPred, predImage);
+                    end
                 end
 %                 if systems.(name).frameDelay > 0
 %                     for fd = 0:systems.(name).frameDelay
-                        [predImage, predT, predA, timeImage, timeA, systems.(name).state] = systems.(name).function([],knowns,systems.(name).state);
-                        
+%                         [predImage, predT, predA, timeImage, timeA, systems.(name).state] = systems.(name).function([],knowns,systems.(name).state);     
 %                     end
 %                 end
 
 %%
                 
                 mp = results.(seqStructStr).megapixels;
-                results.(seqStructStr).(name).mppsImage     = (1/(sequenceTotals.(name).timeImage/JSize))*mp;
-                results.(seqStructStr).(name).mppsTotal     = (1/(sequenceTotals.(name).timeTotal/JSize))*mp;
+                
+                if metrics.mppsImage, results.(seqStructStr).(name).mppsImage     = (1/(sequenceTotals.(name).timeImage/JSize))*mp;end
+                if metrics.mppsTotal, results.(seqStructStr).(name).mppsTotal     = (1/(sequenceTotals.(name).timeTotal/JSize))*mp;end
                 
                 if systems.(name).predictsA
-                    results.(seqStructStr).(name).mppsA     = (1/(sequenceTotals.(name).timeA/JSize))*mp;
-                    results.(seqStructStr).(name).AError    = sequenceTotals.(name).AError/JSize;
+                    if metrics.mppsA, results.(seqStructStr).(name).mppsA     = (1/(sequenceTotals.(name).timeA/JSize))*mp; end
+                    if metrics.AError, results.(seqStructStr).(name).AError    = sequenceTotals.(name).AError/JSize; end
                 else
-                    results.(seqStructStr).(name).mppsA     = NaN;
-                    results.(seqStructStr).(name).AError    = NaN;
+                    if metrics.mppsA, results.(seqStructStr).(name).mppsA     = NaN; end
+                    if metrics.AError, results.(seqStructStr).(name).AError    = NaN;end
                 end
                 
-                results.(seqStructStr).(name).psnr          =  sequenceTotals.(name).psnr / JSize;
-                results.(seqStructStr).(name).ssim          =  sequenceTotals.(name).ssim / JSize;
-                results.(seqStructStr).(name).fade          =  sequenceTotals.(name).fade / JSize;
+                if metrics.psnr, results.(seqStructStr).(name).psnr          =  sequenceTotals.(name).psnr / JSize; end
+                if metrics.ssim, results.(seqStructStr).(name).ssim          =  sequenceTotals.(name).ssim / JSize;end
+                if metrics.fade, results.(seqStructStr).(name).fade          =  sequenceTotals.(name).fade / JSize;end
 
-                results.(seqStructStr).(name).colDiff       =  sequenceTotals.(name).colDiff / JSize;
-
-                results.(seqStructStr).(name).ic            = evaluateIC(sequenceTotals.(name).runningMeans,runningMeans);
-                results.(seqStructStr).(name).tcm           = sequenceTotals.(name).tcm / (JSize-1);
-                results.(seqStructStr).(name).btcm          = evaluateBTCM(sequenceTotals.(name).runningSSIM, runningSSIM_I);
+                if metrics.mic, results.(seqStructStr).(name).mic            = evaluateMIC(sequenceTotals.(name).runningMeans,runningMeans);end
+                if metrics.tcm, results.(seqStructStr).(name).tcm           = evaluateTCM(sequenceTotals.(name).runningSSIM, runningSSIM_J);end
+                if metrics.btcm, results.(seqStructStr).(name).btcm          = evaluateTCM(sequenceTotals.(name).runningSSIM, runningSSIM_I);end
+                
+                if metrics.piqe, results.(seqStructStr).(name).piqe          = sequenceTotals.(name).piqe / JSize;end
+                if metrics.brisque, results.(seqStructStr).(name).brisque       = sequenceTotals.(name).brisque / JSize;end
+                if metrics.colDiff, results.(seqStructStr).(name).colDiff       =  sequenceTotals.(name).colDiff / JSize;end
                 
                 if systems.(name).predictsT
-                    results.(seqStructStr).(name).TError    = sequenceTotals.(name).TError/JSize;
+                    if metrics.TError, results.(seqStructStr).(name).TError    = sequenceTotals.(name).TError/JSize; end
                 else
-                    results.(seqStructStr).(name).TError    = NaN;
+                    if metrics.TError, results.(seqStructStr).(name).TError    = NaN;end
                 end
             end
         end
@@ -335,6 +346,7 @@ function results = evaluateDehaze(path, subset, systems, metrics)
 %     assignin('base','ssimI',runningSSIM_I);
 
 end
+
 %% Evaluation Metrics
 % A lot of these are superfluous wrappers
 
@@ -382,7 +394,7 @@ function q = evaluateColDiff(pred, trueImage)
 end
 
 %% Temporal Consistency
-function q = evaluateIC(predMeans, trueMeans)
+function q = evaluateMIC(predMeans, trueMeans)
     corrH = corrcoef(predMeans.H, trueMeans.H);
     corrH = corrH(1,2);
     corrS = corrcoef(predMeans.S, trueMeans.S);
@@ -393,16 +405,11 @@ function q = evaluateIC(predMeans, trueMeans)
     q = (corrH+corrS+corrV)/3;
 end
 
-function q = evaluateTCM(pred, prevPred, corrTrue)
-    corrPred = corrcoef(pred,prevPred);
-    corrPred = corrPred(1,2);
-    q = (corrPred-corrTrue).^2;
-end
-
-function q = evaluateBTCM(ssimPred,ssimHaze)
-    ssimCorr = corrcoef(ssimPred,ssimHaze);
+function q = evaluateTCM(ssimA, ssimB)
+    ssimCorr = corrcoef(ssimA,ssimB);
     q = ssimCorr(1,2);
 end
+
 
 %% Transmission Error
 function q = evaluateTError(predT, trueT)

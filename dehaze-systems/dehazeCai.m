@@ -7,7 +7,7 @@ eps = 0.0001;
 f=1;
 rho=0.1;
 A_r=15;
-s = 2;
+s = 1;
 
 lambda_t = reshape([0.25 0.5 0.25], [1 1 3]);
 
@@ -30,7 +30,7 @@ if ~exist('state','var') || isempty(fieldnames(state))
     %predTic = tic;
     gray = rgb2gray(img);
     D = min(img,[],3);
-    D = imresize(D, 1/s, 'nearest');
+    %D = imresize(D, 1/s, 'nearest');
     uD = imboxfilt(D,D_r*2+1);
     
     state.dBuff = cat(3,D,D,D);
@@ -57,7 +57,7 @@ else
         uD = state.udBuff(:,:,3);
     else
         D = min(img,[],3);
-        D = imresize(D, 1/s, 'nearest');        
+%         D = imresize(D, 1/s, 'nearest');        
         uD = imboxfilt(D,D_r*2+1);
         state.prevGray = rgb2gray(img);
         state.prevFrame = img;
@@ -77,14 +77,17 @@ else
     timeImage = toc(predTic);
     
     ATic = tic;
-    minValue = blockproc(img,[A_r A_r], state.minFunc);
-    minValue = reshape(minValue, [], 3);
-    L = mean(minValue,2);
-    A = minValue(L==max(L),:);
-    A = mean(A,1);
-    A = reshape(A,1,1,3);
-    
-    predA = rho*A+(1-rho)*state.A;
+    if isempty(img)
+        predA = state.A;
+    else
+        minValue = blockproc(img,[A_r A_r], state.minFunc);
+        minValue = reshape(minValue, [], 3);
+        L = mean(minValue,2);
+        A = minValue(L==max(L),:);
+        A = mean(A,1);
+        A = reshape(A,1,1,3);
+        predA = rho*A+(1-rho)*state.A;
+    end
     timeA = toc(ATic);
     
     state.A = predA;
@@ -95,7 +98,8 @@ end
 
 function [ refined, w, b ] = STMRF(img, dBuff, udBuff, lambda_t, radius, s, eps)
     r = radius*2+1;
-    V = imresize(img, 1/s, 'nearest');
+    V = img;
+    %V = imresize(img, 1/s, 'nearest');
     uV = imboxfilt(V,r);
     uVV = imboxfilt(V.*V, r);
     uVD_t = imboxfilt(dBuff.*V, r);
@@ -106,8 +110,8 @@ function [ refined, w, b ] = STMRF(img, dBuff, udBuff, lambda_t, radius, s, eps)
     w = numerator ./ (denominator + eps);
     b = sum(udBuff.*lambda_t,3)-w .* uV;
 
-    w = imresize(w, [size(img, 1), size(img, 2)], 'bilinear');
-    b = imResample(b, [size(img, 1), size(img, 2)], 'bilinear');
+    %w = imresize(w, [size(img, 1), size(img, 2)], 'bilinear');
+    %b = imresize(b, [size(img, 1), size(img, 2)], 'bilinear');
 
     refined = w .* img + b;
 
