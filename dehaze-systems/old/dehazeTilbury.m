@@ -1,7 +1,11 @@
-function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img, ~, state)
+function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img, ~, state, method)
+
+    if ~exist('method','var') || isempty(method)
+        method = "default";
+    end
     omega = 0.95;
     alpha = 20;
-    sp = 1.5;
+    
     r = 15;
     t0 = 0.01;
     [m, n, ~] = size(img);
@@ -30,7 +34,40 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img,
     else
         repeatedA = predA;
     end
+    
     normed = img ./ repeatedA;
+    
+    if method=="sat"
+        predT = transSat(normed, r, alpha, omega);
+    else
+        predT = transDefault(normed, r, alpha, omega);
+    end
+    
+    maxTransmission = max(predT, t0);
+    
+    predImage = ((img - repeatedA) ./ maxTransmission) + repeatedA;
+    timeImage = toc(predTic);
+end
+
+function t = transDefault(normed, r, alpha, omega)
+    sp = 1.25;
+    darkChannel = min(normed,[],3);
+    
+    se = strel('square',r);
+    ero = imerode(darkChannel,se);
+    dil = imdilate(darkChannel,se);
+    
+    V = alpha*(dil-ero);
+    expD = exp(-V.*darkChannel);
+    
+    denom = windowSumFilter(expD,r);
+    darkChannel = windowSumFilter(expD.*darkChannel,r)./denom;
+    darkChannel = darkChannel.^sp;
+    t = 1 - omega * darkChannel; 
+end
+
+function t = transSat(normed, r, alpha, omega)
+    sp = 1.5;
     darkChannel = min(normed,[],3);
     lightChannel = max(normed,[],3);
     
@@ -45,22 +82,15 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTilbury(img,
     
     V = alpha*(dil-ero);
     expD = exp(-V.*darkChannel);
-%     expD = exp(-alpha*darkChannel);
-%     expD = imerode(expD,se);
     
     denom = windowSumFilter(expD,r);
     darkChannel = windowSumFilter(expD.*darkChannel,r)./denom;
-%     darkChannel = darkChannel.^1.25;
-    predT = 1 - omega * darkChannel;
-    %predT = predT.^0.8;
-    
-    maxTransmission = max(predT, t0);
-    
-    predImage = ((img - repeatedA) ./ maxTransmission) + repeatedA;
-    timeImage = toc(predTic);
+    t = 1 - omega * darkChannel;
 end
 
-
+function t = transY(normed, r, alpha, omega)
+    
+end
 
 function sumImg = windowSumFilter(image, r)
 

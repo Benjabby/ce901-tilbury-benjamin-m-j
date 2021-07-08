@@ -1,7 +1,6 @@
 function [predImage, predT, predA, timeImage, timeA, state] = dehazeHe(img, ~, state)
     omega = 0.95;
     win_size = 15;
-    
     r = 15;
     res = 0.001;
     t0 = 0.1;

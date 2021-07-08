@@ -25,7 +25,7 @@ function results = mergeResults(original, new, replace)
 %     end
     
     for seq = string(fieldnames(new))'
-        if seq=="names" || seq=="metrics", continue; end
+        if seq=="names" || seq=="metrics" || seq == "colCode", continue; end
         original.(seq).frames = new.(seq).frames;
         original.(seq).visibility = new.(seq).visibility;
         original.(seq).megapixels = new.(seq).megapixels;

@@ -3,6 +3,7 @@ function totals = calcTotals(results)
     i = 1;
     for name = results.names
         totals(i).name = name;
+        totals(i).col = results.colCode.(name);
         for metric = results.metrics
             totals(i).(metric) = 0;
         end
@@ -12,7 +13,7 @@ function totals = calcTotals(results)
     totalSample = 0;
     
     for seq = string(fieldnames(results))'
-        if seq == "names" || seq == "metrics", continue; end
+        if seq == "names" || seq == "metrics" || seq == "colCode", continue; end
         sample = results.(seq).frames;
         totalSample = totalSample + sample;
         i = 1;

@@ -1,10 +1,11 @@
 function [predImage, predT, predA, timeImage, timeA, state] = dehazeZhu(img, ~, state)
     r = 15;
-    beta = 1.0;
-% 	gfr = 60;
+    beta = 0.95;
     eps = 0.001;
     
-    t0 = 0.05;
+    t0 = 0.1;
+    t1 = 0.9;
+    
     [m, n, ~] = size(img);
     
     initialTic = tic;
@@ -24,8 +25,8 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeZhu(img, ~, 
     predTic = tic;
     repAtmosphere = repmat(predA, m, n);
     predT = max(tR, t0);
-    maxTransmission = repmat(predT, [1, 1, 3]);
-    predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
+    clampedTransmission = repmat(predT, [1, 1, 3]);
+    predImage = ((img - repAtmosphere) ./ clampedTransmission) + repAtmosphere;
     timeImage = toc(predTic) + initialTime;
 end
 
@@ -104,7 +105,7 @@ for y=1:hei
         
         cov_Ip = [cov_Ip_r(y, x), cov_Ip_g(y, x), cov_Ip_b(y, x)];        
         
-        a(y, x, :) = cov_Ip * inv(Sigma + eps * eye(3)); % very inefficient. Replace this in your C++ code.
+        a(y, x, :) = cov_Ip  / (Sigma + eps * eye(3)); % very inefficient. Replace this in your C++ code.
     end
 end
 
@@ -117,10 +118,7 @@ mean_b = windowSumFilter(b, r_sub)./N;
 
 mean_a = imresize(mean_a, [size(I, 1), size(I, 2)], 'bilinear'); % bilinear is recommended
 mean_b = imresize(mean_b, [size(I, 1), size(I, 2)], 'bilinear');
-q = mean_a(:, :, 1) .* I(:, :, 1)...
-    + mean_a(:, :, 2) .* I(:, :, 2)...
-    + mean_a(:, :, 3) .* I(:, :, 3)...
-    + mean_b;
+q = mean_a(:, :, 1) .* I(:, :, 1) + mean_a(:, :, 2) .* I(:, :, 2) + mean_a(:, :, 3) .* I(:, :, 3) + mean_b;
 end
 
 function sumImg = windowSumFilter(image, r)

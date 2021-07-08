@@ -1,65 +1,13 @@
-function results = evaluateDehaze(path, systems, metrics, subset)
+function results = evaluateDehaze(path, params)
     warning('on','all');
         
-    if ~exist('path','var') || isempty(path), path = fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","dataset"); end
+    %if ~exist('path','var') || isempty(path), path = fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","dataset"); end
     
-    if ~exist('subset','var') || isempty(subset)
-       fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
-       S = textscan(fid,"%s");
-       subset = string(S{1});
-       fclose(fid);
-       clearvars fid S;
-    end
-    
-
-    if ~exist('systems','var') || isempty(systems)
-        systems = defaultSystems();
-    elseif length(fieldnames(systems))<2 || ~isfield(systems,'prepped') || ~systems.prepped
-        isHandles = true;
-        names = fieldnames(systems);
-        for s = 1:length(names)
-            name = names{s};
-           isHandles = isHandles & isa(systems.(name),'function_handle');
-        end
-        
-        if isHandles
-            warning("'systems' has not been prepared properly, attempting to prepare now")
-            systems = prepareSystems(systems);
-        else
-            error("Incorrectly formatted 'systems' structure")
-        end
-    end
-    
-    results.names = string(fieldnames(systems))';
-    results.names(strcmp(results.names,"prepped")) = [];
-    
-    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "tcm" "btcm" "TError", "brisque", "piqe"];
-    % TODO Properly include only required metrics when calculating
-    if ~exist('metrics','var') || isempty(metrics)
-        results.metrics = allMetrics;
-    else
-        removals = {};
-        for i = 1:length(metrics)
-            metric = metrics(i);
-            if ~any(strcmp(allMetrics,metric))
-                warning("Unknown metric '%s' found in 'metrics'. Removing...",metric);
-                removals{end+1} = i;
-            end
-        end
-        for i = 1:length(removals)
-            metrics(removals{i}) = [];
-        end
-        results.metrics = metrics;
-    end
-    
-    tempMetrics = results.metrics;
-    metrics = struct();
-    for metric = allMetrics
-        metrics.(metric) = any(strcmp(tempMetrics, metric));
-    end
+    [results, systems, metrics, subset] = validateInputStruct(params);
      
     dateFolders = dir(path);
     dateFolders = dateFolders([dateFolders.isdir]);
+    
     for i = 3:length(dateFolders)
         dateName = dateFolders(i).name;
         datePath = fullfile(path,dateName);
@@ -129,9 +77,9 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                     if metrics.tcm,  runningSSIM_J = zeros(1,JSize-1); end
                     
                     if metrics.mic
-                        runningMeans.H = zeros(1,JSize);
-                        runningMeans.S = zeros(1,JSize);
-                        runningMeans.V = zeros(1,JSize);
+                        runningMeans.Y = zeros(1,JSize);
+                        runningMeans.Cb = zeros(1,JSize);
+                        runningMeans.Cr = zeros(1,JSize);
                     end
 %                     runningSSIM_J = zeros(1,JSize-1);
                 else
@@ -140,10 +88,10 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                 end
                 
                 if metrics.mic
-                    [hue, sat, val] = rgb2hsv(J);
-                    runningMeans.H(frameID+1) = mean(hue,'all');
-                    runningMeans.S(frameID+1) = mean(sat,'all');
-                    runningMeans.V(frameID+1) = mean(val,'all');
+                    ycbcr = rgb2ycbcr(J);
+                    runningMeans.Y(frameID+1) = mean(ycbcr(:,:,1),'all');
+                    runningMeans.Cb(frameID+1) = mean(ycbcr(:,:,2),'all');
+                    runningMeans.Cr(frameID+1) = mean(ycbcr(:,:,3),'all');
                 end
                 
                 if metrics.TError
@@ -178,9 +126,9 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                         if metrics.btcm || metrics.tcm, sequenceTotals.(name).runningSSIM  = zeros(1,JSize-1); end
                         
                         if metrics.mic
-                            sequenceTotals.(name).runningMeans.H = zeros(1,JSize);
-                            sequenceTotals.(name).runningMeans.S = zeros(1,JSize);
-                            sequenceTotals.(name).runningMeans.V = zeros(1,JSize);
+                            sequenceTotals.(name).runningMeans.Y = zeros(1,JSize);
+                            sequenceTotals.(name).runningMeans.Cb = zeros(1,JSize);
+                            sequenceTotals.(name).runningMeans.Cr = zeros(1,JSize);
                         end
                     
                         if systems.(name).predictsT && metrics.TError
@@ -237,10 +185,10 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                     end
                     
                     if metrics.mic
-                        [hue,sat,val] = rgb2hsv(predImage);
-                        sequenceTotals.(name).runningMeans.H(frameID+1-systems.(name).frameDelay) = mean(hue,'all');
-                        sequenceTotals.(name).runningMeans.S(frameID+1-systems.(name).frameDelay) = mean(sat,'all');
-                        sequenceTotals.(name).runningMeans.V(frameID+1-systems.(name).frameDelay) = mean(val,'all');
+                        ycbcr = rgb2ycbcr(predImage);
+                        sequenceTotals.(name).runningMeans.Y(frameID+1-systems.(name).frameDelay) = mean(ycbcr(:,:,1),'all');
+                        sequenceTotals.(name).runningMeans.Cb(frameID+1-systems.(name).frameDelay) = mean(ycbcr(:,:,2),'all');
+                        sequenceTotals.(name).runningMeans.Cr(frameID+1-systems.(name).frameDelay) = mean(ycbcr(:,:,3),'all');
                     end
                     
                     if frameID > systems.(name).frameDelay && (metrics.tcm || metrics.btcm)
@@ -255,7 +203,7 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                 if metrics.TError, prevT = trueT; end
             end
             textwaitbar(JSize,JSize,sprintf("Evaluating on %s",seqStructStr))
-                
+            
 %             btcmDenom = evaluateBTCM(runningSSIM_J, runningSSIM_I)
             
             %assignin('base','totals',frameTotals);
@@ -292,14 +240,14 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                     end
                     
                     if metrics.mic
-                        [hue,sat,val] = rgb2hsv(predImage);
-                        sequenceTotals.(name).runningMeans.H(frameID+1-systems.(name).frameDelay) = mean(hue,'all');
-                        sequenceTotals.(name).runningMeans.S(frameID+1-systems.(name).frameDelay) = mean(sat,'all');
-                        sequenceTotals.(name).runningMeans.V(frameID+1-systems.(name).frameDelay) = mean(val,'all');
+                        ycbcr = rgb2ycbcr(predImage);
+                        sequenceTotals.(name).runningMeans.Y(end) = mean(ycbcr(:,:,1),'all');
+                        sequenceTotals.(name).runningMeans.Cb(end) = mean(ycbcr(:,:,2),'all');
+                        sequenceTotals.(name).runningMeans.Cr(end) = mean(ycbcr(:,:,3),'all');
                     end
                     
                     if frameID > systems.(name).frameDelay && (metrics.tcm || metrics.btcm)
-                        sequenceTotals.(name).runningSSIM(frameID-systems.(name).frameDelay) = evaluateSSIM(sequenceTotals.(name).prevPred, predImage);
+                        sequenceTotals.(name).runningSSIM(end) = evaluateSSIM(sequenceTotals.(name).prevPred, predImage);
                     end
                 end
 %                 if systems.(name).frameDelay > 0
@@ -312,7 +260,9 @@ function results = evaluateDehaze(path, systems, metrics, subset)
                 
                 mp = results.(seqStructStr).megapixels;
                 
-                if metrics.mppsImage, results.(seqStructStr).(name).mppsImage     = (1/(sequenceTotals.(name).timeImage/JSize))*mp;end
+                if metrics.mppsImage
+                    results.(seqStructStr).(name).mppsImage     = (1/(sequenceTotals.(name).timeImage/JSize))*mp;
+                end
                 if metrics.mppsTotal, results.(seqStructStr).(name).mppsTotal     = (1/(sequenceTotals.(name).timeTotal/JSize))*mp;end
                 
                 if systems.(name).predictsA
@@ -345,6 +295,99 @@ function results = evaluateDehaze(path, systems, metrics, subset)
     end
 %     assignin('base','ssimI',runningSSIM_I);
 
+end
+%%
+
+function [results, systems, metrics, subset] = validateInputStruct(params)
+    if isempty(params) || ~isstruct(params)
+        params = struct();
+    end
+    
+    if ~isfield(params,'Subset') || isempty(params.Subset)
+       fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
+       S = textscan(fid,"%s");
+       subset = string(S{1});
+       fclose(fid);
+    else
+        subset = params.Subset;
+    end
+    
+    if ~isfield(params,'Systems') || isempty(params.Systems)
+        systems = defaultSystems();
+    elseif length(fieldnames(params.Systems))<2 || ~isfield(params.Systems,'prepped') || ~params.Systems.prepped
+        isHandles = true;
+        names = fieldnames(params.Systems);
+        for s = 1:length(names)
+            name = names{s};
+           isHandles = isHandles & isa(params.Systems.(name),'function_handle');
+        end
+        
+        if isHandles
+            warning("'systems' has not been prepared properly, attempting to prepare now")
+            systems = prepareSystems(params.Systems);
+        else
+            error("Incorrectly formatted 'Systems' structure")
+        end
+    else
+        systems = params.Systems;
+    end
+    
+    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "tcm" "btcm" "TError", "brisque", "piqe"];
+    useMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "TError", "brisque", "piqe"];
+    
+    if ~isfield(params,'Metrics') || isempty(params.Metrics)
+        textrics = useMetrics;
+    else
+        removals = {};
+        for i = 1:length(params.Metrics)
+            metric = params.Metrics(i);
+            if ~any(strcmp(allMetrics,metric))
+                warning("Unknown metric '%s' found in 'metrics'. Removing...",metric);
+                removals{end+1} = i;
+            end
+        end
+        for i = 1:length(removals)
+            params.Metrics(removals{i}) = [];
+        end
+        textrics = params.Metrics;
+    end
+    
+    metrics = struct();
+    for metric = allMetrics
+        metrics.(metric) = any(strcmp(textrics, metric));
+    end
+    
+    if ~isfield(params,'Results') || isempty(params.Results)
+        results = struct();
+        results.names = string(fieldnames(systems))';
+        results.metrics = textrics;
+        results.colCode = struct();
+        results.colCode.index = 1;
+    else
+        results.names = union(params.Results.names,string(fieldnames(systems))');
+        results.metrics = union(params.Results.metrics,textrics);
+    end
+    
+    results.names(strcmp(results.names,"prepped")) = [];
+    
+    fullCols = [
+        31 119 180;
+        255 127 14;
+        44 160 44;
+        214 39 40;
+        148 103 189;
+        140 86 75;
+        227 119 194;
+        127 127 127;
+        188 189 34;
+        23 190 207] / 255;
+    
+    for name = results.names
+        if ~isfield(results.colCode,name)
+            results.colCode.(name) = fullCols(results.colCode.index,:);
+            results.colCode.index = results.colCode.index + 1;
+        end
+    end
 end
 
 %% Evaluation Metrics
@@ -395,14 +438,14 @@ end
 
 %% Temporal Consistency
 function q = evaluateMIC(predMeans, trueMeans)
-    corrH = corrcoef(predMeans.H, trueMeans.H);
-    corrH = corrH(1,2);
-    corrS = corrcoef(predMeans.S, trueMeans.S);
-    corrS = corrS(1,2);
-    corrV = corrcoef(predMeans.V, trueMeans.V);
-    corrV = corrV(1,2);
+    corrY = corrcoef(predMeans.Y, trueMeans.Y);
+    corrY = corrY(1,2);
+    corrCb = corrcoef(predMeans.Cb, trueMeans.Cb);
+    corrCb = corrCb(1,2);
+    corrCr = corrcoef(predMeans.Cr, trueMeans.Cr);
+    corrCr = corrCr(1,2);
     
-    q = (corrH+corrS+corrV)/3;
+    q = (corrY*2+corrCb+corrCr)/4;
 end
 
 function q = evaluateTCM(ssimA, ssimB)

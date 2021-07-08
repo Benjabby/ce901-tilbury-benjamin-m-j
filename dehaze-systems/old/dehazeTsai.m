@@ -71,11 +71,11 @@ function [predImage, predT, predA, timeImage, timeA, state] = dehazeTsai(img, ~,
 
     x = mean_a .* gray + mean_b;
     predT = reshape(x, m, n);
-    predT = max(predT, t0);
+    clampedTransmission = max(predT, t0);
     
-    maxTransmission = repmat(predT, [1, 1, 3]);
+    clampedTransmission = repmat(clampedTransmission, [1, 1, 3]);
     
-    predImage = ((img - repAtmosphere) ./ maxTransmission) + repAtmosphere;
+    predImage = ((img - repAtmosphere) ./ clampedTransmission) + repAtmosphere;
     
     timeImage = toc(predTic);
 end

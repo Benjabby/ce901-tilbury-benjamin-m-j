@@ -2,7 +2,7 @@ function systems = defaultSystems()
 
     systems = struct();
     
-    systems.Ancuti = @dehazeAncuti;
+    %systems.Ancuti = @dehazeAncuti;
     systems.Berman = @dehazeBerman;
     systems.Cai = @dehazeCai;
     systems.He = @dehazeHe;
@@ -11,5 +11,5 @@ function systems = defaultSystems()
     systems.Tsai = @dehazeTsai;
     systems.Zhu = @dehazeZhu;
     
-    systems = prepareSystems(systems);    
+    systems = prepareSystems(systems);
 end
