@@ -83,7 +83,7 @@ classdef (Abstract) ExternalPythonDehazer < BaseDehazer
 % 
 %         end
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             img = im2uint8(img);
             [h, w, ~] = size(img);
             

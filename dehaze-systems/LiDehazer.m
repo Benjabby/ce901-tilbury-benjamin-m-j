@@ -1,4 +1,4 @@
-classdef LiDehazer < ExternalPythonDehazer
+classdef (Sealed) LiDehazer < ExternalPythonDehazer
    % Courtesy wrapper 
     
     methods

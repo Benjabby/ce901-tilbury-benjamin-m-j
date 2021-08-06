@@ -161,17 +161,17 @@ class SimpleSkyFilter():
 
             G_pred, skymask, improved  = self.synthesize(img_HD)
 
-            raw_path = os.path.join(output_dir, "raw","img", img_names[idx])
-            im = (G_pred*65535)
-            imageio.imwrite(raw_path, im.astype(np.uint16))
-            
+##            raw_path = os.path.join(output_dir, "raw","img", img_names[idx])
+##            im = (G_pred*65535)
+##            imageio.imwrite(raw_path, im.astype(np.uint16))
+##            
             refined_path = os.path.join(output_dir, "default_refined","img", img_names[idx])
             im = (skymask*65535)
             imageio.imwrite(refined_path, im.astype(np.uint16))
 
-            improved_path = os.path.join(output_dir, "improved","img", img_names[idx])
-            im = (improved*65535)
-            imageio.imwrite(improved_path, im.astype(np.uint16))
+##            improved_path = os.path.join(output_dir, "improved","img", img_names[idx])
+##            im = (improved*65535)
+##            imageio.imwrite(improved_path, im.astype(np.uint16))
 
             if self.verbose: print("    > ",'Processed: %d / %d ...' % (idx+1, len(img_names)))
 

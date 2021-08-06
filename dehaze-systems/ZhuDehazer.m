@@ -1,4 +1,4 @@
-classdef ZhuDehazer < BaseDehazer
+classdef (Sealed) ZhuDehazer < BaseDehazer
 
     properties (Constant)
         FrameDelay  = 0;
@@ -8,12 +8,12 @@ classdef ZhuDehazer < BaseDehazer
     
     properties (SetAccess = private)
         % Defaults from paper & code
-        beta        = 0.95;
+        beta        = 1;
         r           = 15;
         eps         = 0.001;
         t0          = 0.1;
         t1          = 0.9;
-        theta       = [0.1893 1.0267 -1.2966]; 
+        theta       = [0.121779 0.959710 −0.780245]; 
         sigma       = 0.041337;
     end
     
@@ -32,14 +32,14 @@ classdef ZhuDehazer < BaseDehazer
         end
         
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
 
             [m, n, ~] = size(img);
 
             initialTic = tic;
             [dR, dP] = self.calVSMap(img);
-            refineDR = BaseDehazer.fastGuidedFilterColor(img, dP, self.r, self.eps, self.r/4);
-            %tP = exp(-beta*dP);
+			% There's potentially an error in the authors original code. The paper specified refining the depth map after performing the patch minimum ('dR' in code, 'd_r' in paper) however the author's code used the pixel depth map ('dP' in code, 'd' in paper). In any case, following the paper, dR is used here.
+            refineDR = BaseDehazer.fastGuidedFilterColor(img, dR, self.r, self.eps, self.r/4); 
 
             initialTime = toc(initialTic);
 

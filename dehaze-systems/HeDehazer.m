@@ -1,4 +1,4 @@
-classdef HeDehazer < BaseDehazer
+classdef (Sealed) HeDehazer < BaseDehazer
 
     properties (Constant)
         FrameDelay  = 0;
@@ -28,7 +28,7 @@ classdef HeDehazer < BaseDehazer
         end
         
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             [m, n, ~] = size(img);
 
             ATic = tic;

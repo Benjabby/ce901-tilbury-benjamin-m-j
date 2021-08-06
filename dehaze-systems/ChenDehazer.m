@@ -1,4 +1,4 @@
-classdef ChenDehazer < ExternalPythonDehazer
+classdef (Sealed) ChenDehazer < ExternalPythonDehazer
    % Courtesy wrapper 
 
     methods

@@ -1,4 +1,4 @@
-classdef TarelDehazer < BaseDehazer
+classdef (Sealed) TarelDehazer < BaseDehazer
 
     properties (Constant)
         FrameDelay  = 0;
@@ -12,7 +12,7 @@ classdef TarelDehazer < BaseDehazer
         p           = 0.95;
         balance     = -1;
         gfactor     = 1;
-        rc          = 1.65; % Multiplier based on setup of KITTI cameras
+        rc          = 1.65; % Multiplier based on height of KITTI cameras from the ground
         minvd       = 50.0;
         vh          = 175;  % Assumption of horizon line for KITTI data
          
@@ -38,8 +38,8 @@ classdef TarelDehazer < BaseDehazer
         end
         
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
-            [dimy, ~, ncol]=size(img);
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
+            [dimy, dimx, ncol]=size(img);
 
             predTic = tic;
             
@@ -81,12 +81,8 @@ classdef TarelDehazer < BaseDehazer
             sw=abs(w-wm);
             swm=medfilt2(sw, [self.sv, self.sv], 'symmetric');
             b=wm-swm;
-            %compute planar assumption bound
-            c=ones(size(b));
-            for v=1:dimy
-                ci=1-exp((log(0.05)*self.SequenceState.rcalib)/(self.minvd*max(v-self.vh,0)));
-                c(v,:)=c(v,:)*ci;
-            end
+            %compute planar assumption bound	
+			c = repmat(exp((log(0.05)*self.SequenceState.rcalib)./(self.minvd*max((1:dimy)-self.vh,0)))',1,dimx);
             % combining bounds
             b=min(b,c);
             % infered athmospheric veil respecting w and b bounds

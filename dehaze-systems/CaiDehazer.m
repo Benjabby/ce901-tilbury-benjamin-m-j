@@ -1,4 +1,4 @@
-classdef CaiDehazer < BaseDehazer
+classdef (Sealed) CaiDehazer < BaseDehazer
 
     properties (Constant)
         FrameDelay  = 1;
@@ -40,11 +40,15 @@ classdef CaiDehazer < BaseDehazer
         end
         
         function self = newSequence(self, knowns)
-            newSequence@BaseDehazer(self, knowns);
+            if nargin>1
+                newSequence@BaseDehazer(self, knowns);
+            else
+                newSequence@BaseDehazer(self);
+            end
             self.SequenceState.frame = 0;
         end
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             
             minFunc = @(block_struct) min(block_struct.data,[],[1 2]);
             
@@ -88,7 +92,7 @@ classdef CaiDehazer < BaseDehazer
                 else
                     D = min(img,[],3);
                     D = imresize(D, 1/self.downsample, 'nearest');        
-                    uD = imboxfilt(D,self.D_r*2+1);
+                    uD = imboxfilt(D,self.D_r*2+1); % NOTE: This function is used instead of using BaseDehazer.windowSumFunction / denominator because this handles edges differently. The difference in speed is very small.
                     self.SequenceState.prevGray = rgb2gray(img);
                     self.SequenceState.prevFrame = img;
                 end

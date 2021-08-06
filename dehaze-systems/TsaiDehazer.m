@@ -1,4 +1,4 @@
-classdef TsaiDehazer < BaseDehazer
+classdef (Sealed) TsaiDehazer < BaseDehazer
 
     properties (Constant)
         FrameDelay  = 0;
@@ -37,7 +37,7 @@ classdef TsaiDehazer < BaseDehazer
         end
         
         
-        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img)
+        function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             ATic = tic;
             gray = rgb2gray(img);
             mask = gray>=self.AThresh;

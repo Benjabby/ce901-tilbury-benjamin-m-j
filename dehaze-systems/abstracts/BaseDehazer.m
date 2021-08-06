@@ -3,26 +3,41 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
     %   Detailed explanation goes here
     
     properties (Abstract = true, Constant)
-        FrameDelay(1,1) logical; % Currently only frame delay of 1 is supported for evaluator
-        PredictsA(1,1) logical;
-        PredictsT(1,1) logical;
+        FrameDelay(1,1) logical; % Whether this dehazer has a frame delay and will output a prediction for a previous frame when 'dehazeFrame' is called. Currently only frame delay of 1 is supported for evaluator.
+        PredictsA(1,1) logical; % Whether this dehazer outputs a prediction for the atmospheric light.
+        PredictsT(1,1) logical; % Whether this dehazer outputs a prediction for the transmission map.
     end
     
     properties (Access = public)
         SequenceState;
     end
     
-    methods (Abstract)
-        [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self,img);
+    properties (GetAccess = public, SetAccess = private)
+        Knowns;
+        Name;
     end
     
-    methods
+    methods (Abstract)
+        [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self,img,extra);
+    end
     
+    methods        
+        function self = BaseDehazer
+            self.Name = erase(class(self),"Dehazer");
+        end
+        
+        function self = rename(self, newName)
+            self.Name = newName;
+        end
+        
         function self = newSequence(self, knowns)
             self.SequenceState = struct();
-            self.SequenceState.Knowns = knowns;
+            if nargin>1
+                self.Knowns = knowns;
+            end
         end
-   
+        
+        
     end
     
     %% Standardized operations
@@ -36,9 +51,6 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
         function q = guidedFilter(guide, target, radius, eps)
             % Guided Filter implementation from "Fast Guided Filter"
             % http://arxiv.org/abs/1505.00996
-            % Note that this implementation is slower than Matlab's own
-            % 'imguidedfilter' however other dehazing methods make modifications to the
-            % filter than cannot easily be done with Matlab's built-in function
 
             [h, w] = size(guide);
 
@@ -106,19 +118,22 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
             var_I_gb = windowSumFilter(guide_sub(:, :, 2).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_g .*  mean_I_b; 
             var_I_bb = windowSumFilter(guide_sub(:, :, 3).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_b .*  mean_I_b; 
 
-            a = zeros(h, w, 3);
-            for y=1:h
-                for x=1:w        
-                    Sigma = [var_I_rr(y, x), var_I_rg(y, x), var_I_rb(y, x);
-                        var_I_rg(y, x), var_I_gg(y, x), var_I_gb(y, x);
-                        var_I_rb(y, x), var_I_gb(y, x), var_I_bb(y, x)];
+            N = h*w;
+            top = cat(2,reshape(var_I_rr,1,1,[]),reshape(var_I_rg,1,1,[]),reshape(var_I_rb,1,1,[]));
+            mid = cat(2,reshape(var_I_rg,1,1,[]),reshape(var_I_gg,1,1,[]),reshape(var_I_gb,1,1,[]));
+            bot = cat(2,reshape(var_I_rb,1,1,[]),reshape(var_I_gb,1,1,[]),reshape(var_I_bb,1,1,[]));
+            sigma = cat(1,top,mid,bot); % I'm sure there's a more efficient way to stack like this but it's not really important
+            cov_Ip = cat(1,reshape(cov_Ip_r,1,[],1),reshape(cov_Ip_g,1,[],1),reshape(cov_Ip_b,1,[],1));
+            reps = repmat(eps*reshape(eye(3),3,3,1),1,1,N);
 
-                    cov_Ip = [cov_Ip_r(y, x), cov_Ip_g(y, x), cov_Ip_b(y, x)];        
+            M = sigma + reps;
 
-                    a(y, x, :) = cov_Ip  / (Sigma + eps * eye(3)); % very inefficient. Replace this in your C++ code.
-                end
-            end
-
+            cov_Ip = reshape(cov_Ip, 3*N, []); 
+            I = repmat(reshape(1:3*N,3,1,N),[1 3 1]);
+            J = repmat(reshape(1:3*N,1,3,N),[3 1 1]);
+            A = sparse(I(:),J(:),M(:));
+            a = reshape(reshape(A \ cov_Ip, [3 N])',[h w 3]);
+            
             b = mean_p - a(:, :, 1) .* mean_I_r - a(:, :, 2) .* mean_I_g - a(:, :, 3) .* mean_I_b; % Eqn. (15) in the paper;
 
             mean_a(:, :, 1) = windowSumFilter(a(:, :, 1), r_sub)./N;
