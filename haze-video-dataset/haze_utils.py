@@ -8,6 +8,14 @@ def create_haze(img_path, depth_path, out_dir, name, a, vis, mask_path=None, dou
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB).astype(np.float32)/255.0
     depth = loadmat(depth_path)['depth']
     depth = depth[...,None]
+
+    if depth.shape[0:2] != img.shape[0:2]:
+        h, w = img.shape[0:2]
+        x = int(img.shape[1]/2 - w/2)
+        y = int(img.shape[0]/2 - h/2)
+
+        depth = depth[y:y+h, x:x+w]
+    
     depth*=depth_scale
     depth/=1000
 
@@ -19,7 +27,7 @@ def create_haze(img_path, depth_path, out_dir, name, a, vis, mask_path=None, dou
         sky_mask = sky_mask[...,None]
         disp = disp*sky_mask
         
-    
+    #depth = 1.0/disp
     beta = 3.912/vis;
     beta = np.array([[[beta, beta, beta]]])
     transmission = np.exp(-beta*depth)

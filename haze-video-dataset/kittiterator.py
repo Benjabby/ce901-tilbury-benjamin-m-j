@@ -290,7 +290,8 @@ def run_haze(instance, args):
 
     image_dir = os.path.join(args.current_path,"image_02","data")
     print("HazeGen     > ","Running on {:d} images in {}".format(len(os.listdir(image_dir)),args.current_folder))
-
+    if args.haze_verbose:
+        print("HazeGen     > ","Generating with A intensity = {} and vis = {}".format(a0,vis))
     
     img_names = os.listdir(image_dir)
     img_names.sort()
@@ -339,7 +340,7 @@ paths['sky masks raw']                  = os.path.join('sky_mask','raw','img')
 paths['sky masks volume']               = os.path.join('sky_mask','volume_refined','img')
 paths['depth maps mono']                = os.path.join('depth','monodepth','mat')
 paths['depth maps many']                = os.path.join('depth','manydepth','mat')
-paths['depth maps lea']                 = os.path.join('depth','lea','mat')
+paths['depth maps lea']                 = os.path.join('depth','leastereo','mat')
 paths['depth maps augmented']           = os.path.join('depth','augmented','mat')
 paths['lidar sky aug']                  = os.path.join('proj_depth','sky_aug')
 paths['lidar full aug']                 = os.path.join('proj_depth','full_aug')

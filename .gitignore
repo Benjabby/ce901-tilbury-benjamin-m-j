@@ -10,3 +10,4 @@ haze-video-dataset/temp
 dehaze-systems/tests
 dehaze-evaluation/vids
 *.asv
+*~$*
