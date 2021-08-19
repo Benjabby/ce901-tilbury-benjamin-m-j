@@ -13,7 +13,7 @@ classdef (Sealed) ZhuDehazer < BaseDehazer
         eps         = 0.001;
         t0          = 0.1;
         t1          = 0.9;
-        theta       = [0.121779 0.959710 −0.780245]; 
+        theta       = [0.121779 0.959710 -0.780245]; 
         sigma       = 0.041337;
     end
     
