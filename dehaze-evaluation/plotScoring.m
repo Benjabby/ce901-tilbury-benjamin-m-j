@@ -1,4 +1,4 @@
-function plotScoring(results, comparings)
+function plotScoring(results, comparings, excludeComparings)
     % Comparings are the names of methods excluded from the scale calculation.
     % In my case this will be my methods as they are to be compared against
     % the scales of the already evaluated methods.
@@ -26,35 +26,57 @@ function plotScoring(results, comparings)
         end
         
         % Get the order right
-        names = [partANames, comparings];
+        if nargin>2 && excludeComparings
+            names = partANames;
+            igrey = 0;
+        else
+            names = [partANames, comparings];
+            igrey = length(partANames);
+        end
     else
         partA = results;
         partB = [];
+        igrey = 0;
     end
     
     [scores, scaling] = normalisedScore(partA);
     
-    if ~isempty(partB)
+    
+    fullCols = [
+            31 119 180;
+            214 39 40;
+            44 160 44;
+            255 127 14;
+            148 103 189;
+            140 86 75;
+            227 119 194;
+%             127 127 127;
+            23 190 207
+            188 189 34;
+            0 0 0
+            0 0 0
+            0 0 0 ] / 255;
+    
+    cols = zeros(length(names),5,3);
+    for i = 1:length(names)
+        k = i-igrey;
+        if k<1
+            cols(i,:,:) = repmat(fullCols(i,:).*0.5+[0.5,0.5,0.5],5,1);
+        else
+            cols(i,:,:) = repmat(fullCols(k,:),5,1);
+        end
+    end
+    
+    if ~isempty(partB) && (nargin<=2 || ~excludeComparings)
         scoresB = normalisedScore(partB,scaling);
         scores = cat(1,scores,scoresB);
     end
 
-    fullCols = [
-            31 119 180;
-            255 127 14;
-            44 160 44;
-            214 39 40;
-            148 103 189;
-            140 86 75;
-            227 119 194;
-            127 127 127;
-            188 189 34;
-            23 190 207] / 255;
-
     bars=bar(scores','FaceColor','flat');
 
+    
     for i=1:length(bars)
-       bars(i).CData = repmat(fullCols(i,:),5,1);
+       bars(i).CData = squeeze(cols(i,:,:));
     end
     set(gca,'XTickLabel',["Realtime Performance","Visibility Improvement","Naturalness Quality","Video Consistency","Model Conformity"]);
     legend(names);
