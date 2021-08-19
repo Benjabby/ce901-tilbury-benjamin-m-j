@@ -39,7 +39,17 @@ classdef (Sealed) TarelDehazer < BaseDehazer
         
         
         function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
-            [dimy, dimx, ncol]=size(img);
+            if isempty(self.Knowns) || ~isfield(self.Knowns,'K')
+                fprintf("This dehazer requires projection matrix from camera calibration before dehazing.\nPlease use newSequence to pass a structure containing the field 'K' which has the 3x4 projection matrix\n");
+                predImage = [];
+                predT = [];
+                predA = [];
+                timeImage = [];
+                timeA = [];
+                return
+            end
+            
+            [m, n, ncol]=size(img);
 
             predTic = tic;
             
@@ -82,7 +92,7 @@ classdef (Sealed) TarelDehazer < BaseDehazer
             swm=medfilt2(sw, [self.sv, self.sv], 'symmetric');
             b=wm-swm;
             %compute planar assumption bound	
-			c = repmat(exp((log(0.05)*self.SequenceState.rcalib)./(self.minvd*max((1:dimy)-self.vh,0)))',1,dimx);
+			c = repmat(exp((log(0.05)*self.SequenceState.rcalib)./(self.minvd*max((1:m)-self.vh,0)))',1,n);
             % combining bounds
             b=min(b,c);
             % infered athmospheric veil respecting w and b bounds

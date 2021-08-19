@@ -10,63 +10,72 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
     properties (SetAccess = private)
         
         %% Original values
-        method      = 'default';
-        omega       = 0.95;
-        alpha       = 20;
-        lambda      = 1.25;
-        r           = 15;
-        rA          = 30;
-        rM          = 15;
-        t0          =  0.01;
-        %% Optimised
-%         method      = 'default'
-%         alpha       = 33.712;
-%         lambda      = 1.2009;
-%         omega       = 0.90867;
-%         r           = 26;
-%         rA          = 75;
-%         rM          = 51;
-%         t0          = 0.1494;
-        %% alt 1
-%         method      = 'default';
-%         omega       = 0.95486;
-%         alpha       = 38.152;
-%         lambda      = 1.2693;
-%         r           = 27;
-%         rA          = 39;
-%         rM          = 57;
-%         t0          = 0.19743;
-        
-        %% alt 2
-%         method    = 'default';
-%         omega     = 0.956081121476979;
-%         alpha     = 9.97097095180161;
-%         lambda    = 1.37912519131371;
-%         r         = 29;
-%         rA        = 42;
-%         rM        = 29;
-%         t0        = 0.192701658635203;
+%         method      = 'masked';
+%         alpha       = 20;
+%         gamma      = 1.25;
+%         omega       = 0.95;
+%         t0          =  0.1;
+%         r           = 15;
+%         rA          = 30;
+%         rM          = 15;
+        %% Best optimised result
+        method      = 'local';
+        alpha       = 18.1283727963125;
+        gamma      = 1.28331033279787;
+        omega       = 0.944081856347016;
+        t0          = 0.122535149860325;
+        r           = 37;
+        rA          = 61;
+        rM          = 81;
+        alphaM      = 0; % Only used for 'opening' method
 		%%
 		minvd       = 50.0;
 		rc          = 1.65; 	  % camera height
         vh          = 175;  % Assumption of horizon line for KITTI data
     end
     
+    methods (Static)
+        
+        function system = initial
+            %% Returns a TilburyDehazer with the initial (unoptimised) parameters.
+            system = TilburyDehazer('local',20,1.25,0.95,0.1,15,30,15);
+        end
+        
+        function system = bestLocal
+            %% Returns a Local type TilburyDehazer with the best found parameters
+            system = TilburyDehazer('local',10.1994823198406,1.28476110308647,0.851134429960658,5.41478542049196e-05,42,39,40);
+        end
+        
+        function system = bestOpening
+            %% Returns an Opening type TilburyDehazer with the best found parameters
+            system = TilburyDehazer('opening',23.8610032629807,1.27706489799881,0.957621936853399,0.183191485781434,37,46,41,5.59288358085337);
+        end
+        
+        function system = bestGlobal
+            %% Returns a Global type TilburyDehazer with the best found parameters
+            system = TilburyDehazer('global',7.21237201480562,1.28137736777996,0.909942155725948,0.160068556079595,40,43);
+        end
+    end
+    
     methods
-        function self = TilburyDehazer(method, alpha, lambda, omega, r, rA, rM, t0, minvd, rc, vh)
+        function self = TilburyDehazer(method, alpha, gamma, omega, t0, r, rA, rM, alphaM, minvd, rc, vh)
             self = self@BaseDehazer;
             
-            if nargin>0 && ~isempty(method), self.method = method; end
+            if nargin>0 && ~isempty(method)
+                self.method = method;
+            end
+            
             if nargin>1 && ~isempty(alpha), self.alpha = alpha; end
-            if nargin>2 && ~isempty(lambda), self.lambda = lambda; end
+            if nargin>2 && ~isempty(gamma), self.gamma = gamma; end
             if nargin>3 && ~isempty(omega), self.omega = omega; end
-            if nargin>4 && ~isempty(r), self.r = r; end
-            if nargin>5 && ~isempty(rA), self.rA = rA; end
-            if nargin>6 && ~isempty(rM), self.rM = rM; end
-            if nargin>7 && ~isempty(t0), self.t0 = t0; end
-            if nargin>8 && ~isempty(minvd), self.minvd = minvd; end
-            if nargin>9 && ~isempty(rc), self.rc = rc; end
-            if nargin>10 && ~isempty(vh), self.vh = vh; end
+            if nargin>4 && ~isempty(t0), self.t0 = t0; end
+            if nargin>5 && ~isempty(r), self.r = r; end
+            if nargin>6 && ~isempty(rA), self.rA = rA; end
+            if nargin>7 && ~isempty(rM), self.rM = rM; end
+            if nargin>8 && ~isempty(alphaM), self.alphaM = alphaM; end
+            if nargin>9 && ~isempty(minvd), self.minvd = minvd; end
+            if nargin>10 && ~isempty(rc), self.rc = rc; end
+            if nargin>11 && ~isempty(vh), self.vh = vh; end
             
         end
         
@@ -77,13 +86,24 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
         
         function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             
+            if isempty(self.Knowns) || ~isfield(self.Knowns,'K')
+                fprintf("This dehazer requires projection matrix from camera calibration before dehazing.\nPlease use newSequence to pass a structure containing the field 'K' which has the 3x4 projection matrix\n");
+                predImage = [];
+                predT = [];
+                predA = [];
+                timeImage = [];
+                timeA = [];
+                return
+            end
+            
             [m, n, ~] = size(img);
             
             ATic = tic;
         %     predA = smoothAtmLight(img);
 
             darkChannel = min(img,[],3);
-            se = strel('square',self.rA);
+            w = self.rA*2 + 1; % radius to window width
+            se = strel('square', w); 
             darkChannel = imerode(darkChannel,se);
 
             nPixels = m * n;
@@ -105,15 +125,22 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
 %             end
 
             normed = img ./ repeatedA;
+            
+            minChannel = min(normed,[],3);
 
-            if self.method=="sat"
-                predT = self.transSat(normed);
+            if self.method=="opening"
+                darkChannel = self.seOpen(minChannel);
             elseif self.method=="global"
-                predT = self.transGlobal(normed);
+                darkChannel = self.seGlobal(minChannel);
             else
-                predT = self.transDefault(normed);
+                darkChannel = self.seLocal(minChannel);
             end
 			
+            darkChannel = darkChannel.^self.gamma;
+            
+            predT = 1 - self.omega * darkChannel; 
+
+            
             %% Horizon line estimation
             
 %             bigSE = strel('square',self.r*2+1);
@@ -148,52 +175,38 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
     
     methods (Access = private)
         
-        function t = transGlobal(self, normed)
-            darkChannel = min(normed,[],3);
-
-            expD = exp(-self.alpha.*darkChannel);
+        function darkChannel = seGlobal(self, minChannel)
+            expD = exp(-self.alpha.*minChannel);
 
             denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*darkChannel,self.r)./denom;
-            t = 1 - self.omega * darkChannel; 
+            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
         end
         
-        function t = transDefault(self, normed)
-            darkChannel = min(normed,[],3);
-
-            se = strel('square',self.rM);
-            ero = imerode(darkChannel,se);
-            dil = imdilate(darkChannel,se);
+        function darkChannel = seLocal(self, minChannel)
+            
+            w = self.rM*2 + 1; % radius to window witdh;
+            se = strel('square',w);
+            ero = imerode(minChannel,se);
+            dil = imdilate(minChannel,se);
 
             V = self.alpha*(dil-ero);
-            expD = exp(-V.*darkChannel);
+            expD = exp(-V.*minChannel);
 
             denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*darkChannel,self.r)./denom;
-            darkChannel = darkChannel.^self.lambda;
-            t = 1 - self.omega * darkChannel; 
+            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
         end
 
-        function t = transSat(self, normed)
-            darkChannel = min(normed,[],3);
-            lightChannel = max(normed,[],3);
-
-            se = strel('square',self.rM);
-            ero = imerode(darkChannel,se);
-            dil = imdilate(darkChannel,se);
-
-            sat = (lightChannel-darkChannel)./lightChannel;
-            sat = imdilate(sat,se);
-            sat = 1-sat;
-            darkChannel = min(darkChannel,sat.^self.lambda);
-
-            V = self.alpha*(dil-ero);
-            expD = exp(-V.*darkChannel);
-
+        function darkChannel = seOpen(self, minChannel)
+            
+            % Smooth minimum
+            expD = exp(-self.alpha.*minChannel);
             denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*darkChannel,self.r)./denom;
-            darkChannel = darkChannel.^self.lambda;
-            t = 1 - self.omega * darkChannel;
+            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
+            
+            % Smooth maximum
+            expD = exp(self.alphaM.*darkChannel);
+            denom = BaseDehazer.windowSumFilter(expD,self.rM);
+            darkChannel = BaseDehazer.windowSumFilter(expD.*darkChannel,self.rM)./denom;
         end
 
     end

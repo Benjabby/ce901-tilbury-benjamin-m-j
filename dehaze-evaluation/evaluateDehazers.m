@@ -190,17 +190,18 @@ function results = evaluateDehazers(path, params)
                     
                     if frameID==0
                         
-                        if metrics.mppsTotal,           results.(seqStr).(name).timeTotal.all         = zeros(1,JSize+dehazer.FrameDelay); end
+                        if metrics.timeTotal,           results.(seqStr).(name).timeTotal.all         = zeros(1,JSize+dehazer.FrameDelay); end
                         
                         if dehazer.PredictsA
-                            if metrics.mppsA,           results.(seqStr).(name).timeA.all             = zeros(1,JSize); end
+                            if metrics.timeA,           results.(seqStr).(name).timeA.all             = zeros(1,JSize); end
                             if metrics.AError,          results.(seqStr).(name).AError.all            = zeros(1,JSize); end
                         end
                             
-                        if metrics.mppsImage,           results.(seqStr).(name).timeImage.all         = zeros(1,JSize); end
+                        if metrics.timeImage,           results.(seqStr).(name).timeImage.all         = zeros(1,JSize); end
                         
                         if metrics.psnr,                results.(seqStr).(name).psnr.all              = zeros(1,JSize); end
                         if metrics.ssim,                results.(seqStr).(name).ssim.all              = zeros(1,JSize); end
+                        if metrics.msssim,              results.(seqStr).(name).msssim.all            = zeros(1,JSize); end
                         if metrics.fade,                results.(seqStr).(name).fade.all              = zeros(1,JSize); end
                         
                         if metrics.piqe,                results.(seqStr).(name).piqe.all              = zeros(1,JSize); end
@@ -242,7 +243,7 @@ function results = evaluateDehazers(path, params)
                     indexC = frameID-dehazer.FrameDelay;
                     
                     if frameID < dehazer.FrameDelay
-                        if metrics.mppsTotal,           results.(seqStr).(name).timeTotal.all(indexA)    = timeTotal; end
+                        if metrics.timeTotal,           results.(seqStr).(name).timeTotal.all(indexA)    = timeTotal; end
                         continue
                     end
                     
@@ -264,16 +265,17 @@ function results = evaluateDehazers(path, params)
                         prevPreds.(name) = predImage;
                     end
                     
-                    if metrics.mppsTotal,               results.(seqStr).(name).timeTotal.all(indexA)     = timeTotal; end
-                    if metrics.mppsImage,               results.(seqStr).(name).timeImage.all(indexB)     = timeImage; end
+                    if metrics.timeTotal,               results.(seqStr).(name).timeTotal.all(indexA)     = timeTotal; end
+                    if metrics.timeImage,               results.(seqStr).(name).timeImage.all(indexB)     = timeImage; end
                     
                     if dehazer.PredictsA
-                        if metrics.mppsA,               results.(seqStr).(name).timeA.all(indexB)         = timeA; end
+                        if metrics.timeA,               results.(seqStr).(name).timeA.all(indexB)         = timeA; end
                         if metrics.AError,              results.(seqStr).(name).AError.all(indexB)        = evaluateAError(predA,trueA); end
                     end
                     
                     if metrics.psnr,                    results.(seqStr).(name).psnr.all(indexB)          = evaluatePSNR(predImage,targetJ); end
                     if metrics.ssim,                    results.(seqStr).(name).ssim.all(indexB)          = evaluateSSIM(predImage,targetJ); end
+                    if metrics.msssim,                  results.(seqStr).(name).msssim.all(indexB)        = evaluateMSSSIM(predImage,targetJ); end
                     if metrics.fade,                    results.(seqStr).(name).fade.all(indexB)          = evaluateFADE(predImage); end
                     
                     if metrics.piqe,                    results.(seqStr).(name).piqe.all(indexB)          = evaluatePIQE(predImage); end
@@ -332,16 +334,17 @@ function results = evaluateDehazers(path, params)
                     
                     if metrics.speedqa,                 results.(seqStr).(name).speedqa.all(indexC)      = evaluateSpEEDQA(predImage, dehazer.SequenceState.prevFrame, targetJ, targetPrevJ); end
                     
-                    if metrics.mppsTotal,               results.(seqStr).(name).timeTotal.all(end)       = timeTotal; end
-                    if metrics.mppsImage,               results.(seqStr).(name).timeImage.all(end)       = timeImage; end
+                    if metrics.timeTotal,               results.(seqStr).(name).timeTotal.all(end)       = timeTotal; end
+                    if metrics.timeImage,               results.(seqStr).(name).timeImage.all(end)       = timeImage; end
                     
                     if dehazer.PredictsA
-                        if metrics.mppsA,               results.(seqStr).(name).timeA.all(end)         = timeA; end
+                        if metrics.timeA,               results.(seqStr).(name).timeA.all(end)         = timeA; end
                         if metrics.AError,              results.(seqStr).(name).AError.all(end)        = evaluateAError(predA,trueA); end
                     end
                     
                     if metrics.psnr,                    results.(seqStr).(name).psnr.all(end)          = evaluatePSNR(predImage,targetJ); end
                     if metrics.ssim,                    results.(seqStr).(name).ssim.all(end)          = evaluateSSIM(predImage,targetJ); end
+                    if metrics.msssim,                  results.(seqStr).(name).msssim.all(end)        = evaluateMSSSIM(predImage,targetJ); end
                     if metrics.fade,                    results.(seqStr).(name).fade.all(end)          = evaluateFADE(predImage); end
                     
                     if metrics.piqe,                    results.(seqStr).(name).piqe.all(end)          = evaluatePIQE(predImage); end
@@ -373,47 +376,41 @@ function results = evaluateDehazers(path, params)
                     results.(seqStr).(name).speedqa.stdv                     =  std(results.(seqStr).(name).psnr.all,'omitnan');
                 end
                 
+                % megapixels, seconds-per-megapixel, and
+                % megapixels-per-second stuff will be dealt with elsewhere
+%                 mp = results.(seqStr).props.megapixels;
                 
-                mp = results.(seqStr).props.megapixels;
-                
-                if metrics.mppsTotal
-                            results.(seqStr).(name).mppsTotal.all             = mp./results.(seqStr).(name).timeTotal.all;
-                            results.(seqStr).(name).mppsTotal.mean            = mean(results.(seqStr).(name).mppsTotal.all);
-                            results.(seqStr).(name).mppsTotal.stdv            = std(results.(seqStr).(name).mppsTotal.all);
-                            
+                if metrics.timeTotal
+                        if dehazer.FrameDelay
+                            % Distribute the extra 'set-up' frame time accross the the rest of the times. Won't change stdev
+                            results.(seqStr).(name).timeTotal.all = results.(seqStr).(name).timeTotal.all(2:end) + results.(seqStr).(name).timeTotal.all(1)./JSize;
+                        end
+
                             results.(seqStr).(name).timeTotal.mean            = mean(results.(seqStr).(name).timeTotal.all);
                             results.(seqStr).(name).timeTotal.stdv            = std(results.(seqStr).(name).timeTotal.all);
+                            
                 end
                 
-                if metrics.mppsImage
-                            results.(seqStr).(name).mppsImage.all             = mp./results.(seqStr).(name).timeImage.all;
-                            results.(seqStr).(name).mppsImage.mean            = mean(results.(seqStr).(name).mppsImage.all);
-                            results.(seqStr).(name).mppsImage.stdv            = std(results.(seqStr).(name).mppsImage.all);
-                            
+                if metrics.timeImage 
                             results.(seqStr).(name).timeImage.mean            = mean(results.(seqStr).(name).timeImage.all);
                             results.(seqStr).(name).timeImage.stdv            = std(results.(seqStr).(name).timeImage.all);
                 end
                 
                 if dehazer.PredictsA
-                            results.(seqStr).(name).mppsA.all                 = mp./results.(seqStr).(name).timeA.all;
-                            results.(seqStr).(name).mppsA.mean                = mean(results.(seqStr).(name).mppsA.all);
-                            results.(seqStr).(name).mppsA.stdv                = std(results.(seqStr).(name).mppsA.all);
-                            
+                    if metrics.timeA
                             results.(seqStr).(name).timeA.mean                = mean(results.(seqStr).(name).timeA.all);
                             results.(seqStr).(name).timeA.stdv                = std(results.(seqStr).(name).timeA.all);
+                    end
                     
                     if metrics.AError
                             results.(seqStr).(name).AError.mean                = mean(results.(seqStr).(name).AError.all);
                             results.(seqStr).(name).AError.stdv                = std(results.(seqStr).(name).AError.all);
                     end
                 else
-                    if metrics.mppsA
-                        results.(seqStr).(name).mppsA.all = NaN;
-                        results.(seqStr).(name).mppsA.mean = NaN;
-                        results.(seqStr).(name).mppsA.stdv = NaN;
+                    if metrics.timeA
+                        results.(seqStr).(name).timeA.mean = NaN;
                     end
                     if metrics.AError
-                        results.(seqStr).(name).AError.all = NaN;
                         results.(seqStr).(name).AError.mean = NaN;
                         results.(seqStr).(name).AError.stdv = NaN;
                     end
@@ -426,6 +423,10 @@ function results = evaluateDehazers(path, params)
                 if metrics.ssim
                         results.(seqStr).(name).ssim.mean                     =  mean(results.(seqStr).(name).ssim.all);
                         results.(seqStr).(name).ssim.stdv                     =  std(results.(seqStr).(name).ssim.all);
+                end
+                if metrics.msssim
+                        results.(seqStr).(name).msssim.mean                     =  mean(results.(seqStr).(name).msssim.all);
+                        results.(seqStr).(name).msssim.stdv                     =  std(results.(seqStr).(name).msssim.all);
                 end
                 if metrics.fade
                         results.(seqStr).(name).fade.mean                     =  mean(results.(seqStr).(name).fade.all);
@@ -460,7 +461,6 @@ function results = evaluateDehazers(path, params)
                 else
                     if metrics.TError
                             results.(seqStr).(name).TError.mean                = NaN;
-                            results.(seqStr).(name).TError.stdv                = NaN;
                     end
                 end
                 
@@ -532,7 +532,14 @@ function [results, systems, metrics, sequences, autosave, sample, seed] = valida
     
     
     if ~isfield(params,'Systems') || isempty(params.Systems)
-        systems = [BermanDehazer, CaiDehazer, ChenDehazer, HeDehazer, LiDehazer, TarelDehazer, TilburyDehazer, TsaiDehazer, ZhuDehazer];
+        % Unoptimised TilburyDehazer parameters
+        unoptTilbury = TilburyDehazer.initial;
+        % Optimised TilburyDehazer parameters (default values in class)
+        % Currently excluded, need to re-optimise...
+%         optTilbury = TilburyDehazer;
+%         optTilbury.rename("TilburyOptimised"); % Rename to avoid name clash
+        
+        systems = [BermanDehazer, CaiDehazer, ChenDehazer, HeDehazer, LiDehazer, TarelDehazer, unoptTilbury, TsaiDehazer, ZhuDehazer, UnrefinedDehazer];
     elseif isa(params.Systems, "BaseDehazer")
         systems = params.Systems;
     elseif isa(params.Systems, "string")
@@ -546,8 +553,8 @@ function [results, systems, metrics, sequences, autosave, sample, seed] = valida
         systems = [BermanDehazer, CaiDehazer, ChenDehazer, HeDehazer, LiDehazer, TarelDehazer, TilburyDehazer, TsaiDehazer, ZhuDehazer];
     end
     
-    allMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "TError", "brisque", "piqe", "niqe", "speedqa"];
-%     useMetrics = ["mppsImage" "mppsTotal" "mppsA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "TError", "brisque", "piqe"];
+    allMetrics = ["timeImage" "timeTotal" "timeA" "AError" "psnr" "msssim" "ssim" "fade" "colDiff" "mic" "TError", "brisque", "piqe", "niqe", "speedqa"];
+%     useMetrics = ["timeImage" "timeTotal" "timeA" "AError" "psnr" "ssim" "fade" "colDiff" "mic" "TError", "brisque", "piqe"];
     
     if ~isfield(params,'Metrics') || isempty(params.Metrics)
         textrics = allMetrics;
@@ -615,6 +622,15 @@ function q = evaluatePSNR(pred, trueImage)
        trueImage = imcrop(trueImage, wind);
     end
     q = psnr(pred, trueImage);
+end
+
+function q = evaluateMSSSIM(pred, trueImage)
+    if any(size(pred,[1 2])~=size(trueImage,[1 2]))
+       wind = centerCropWindow2d(size(trueImage),size(pred));
+       trueImage = imcrop(trueImage, wind);
+    end
+    
+    q = mean(multissim(pred,trueImage));
 end
 
 function q = evaluateSSIM(pred, trueImage)

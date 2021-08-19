@@ -54,13 +54,13 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
 
             [h, w] = size(guide);
 
-            avgDenom = windowSumFilter(ones(h, w), radius);
+            avgDenom = BaseDehazer.windowSumFilter(ones(h, w), radius);
 
-            mean_g = windowSumFilter(guide, radius) ./ avgDenom;
-            mean_t = windowSumFilter(target, radius) ./ avgDenom;
+            mean_g = BaseDehazer.windowSumFilter(guide, radius) ./ avgDenom;
+            mean_t = BaseDehazer.windowSumFilter(target, radius) ./ avgDenom;
 
-            corr_gg = windowSumFilter(guide .* guide, radius) ./ avgDenom;
-            corr_gt = windowSumFilter(guide .* target, radius) ./ avgDenom;
+            corr_gg = BaseDehazer.windowSumFilter(guide .* guide, radius) ./ avgDenom;
+            corr_gt = BaseDehazer.windowSumFilter(guide .* target, radius) ./ avgDenom;
 
             var_g = corr_gg - mean_g .* mean_g;
             cov_gt = corr_gt - mean_g .* mean_t;
@@ -68,8 +68,8 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
             a = cov_gt ./ (var_g + eps);
             b = mean_t - a .* mean_g;
 
-            mean_a = windowSumFilter(a, radius) ./ avgDenom;
-            mean_b = windowSumFilter(b, radius) ./ avgDenom;
+            mean_a = BaseDehazer.windowSumFilter(a, radius) ./ avgDenom;
+            mean_b = BaseDehazer.windowSumFilter(b, radius) ./ avgDenom;
 
             q = mean_a .* guide + mean_b;
 
@@ -89,17 +89,17 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
             r_sub = r / s; % make sure this is an integer
 
             [h, w] = size(target_sub);
-            N = windowSumFilter(ones(h, w), r_sub); % the size of each local patch; N=(2r+1)^2 except for boundary pixels.
+            N = BaseDehazer.windowSumFilter(ones(h, w), r_sub); % the size of each local patch; N=(2r+1)^2 except for boundary pixels.
 
-            mean_I_r = windowSumFilter(guide_sub(:, :, 1), r_sub) ./ N;
-            mean_I_g = windowSumFilter(guide_sub(:, :, 2), r_sub) ./ N;
-            mean_I_b = windowSumFilter(guide_sub(:, :, 3), r_sub) ./ N;
+            mean_I_r = BaseDehazer.windowSumFilter(guide_sub(:, :, 1), r_sub) ./ N;
+            mean_I_g = BaseDehazer.windowSumFilter(guide_sub(:, :, 2), r_sub) ./ N;
+            mean_I_b = BaseDehazer.windowSumFilter(guide_sub(:, :, 3), r_sub) ./ N;
 
-            mean_p = windowSumFilter(target_sub, r_sub) ./ N;
+            mean_p = BaseDehazer.windowSumFilter(target_sub, r_sub) ./ N;
 
-            mean_Ip_r = windowSumFilter(guide_sub(:, :, 1).*target_sub, r_sub) ./ N;
-            mean_Ip_g = windowSumFilter(guide_sub(:, :, 2).*target_sub, r_sub) ./ N;
-            mean_Ip_b = windowSumFilter(guide_sub(:, :, 3).*target_sub, r_sub) ./ N;
+            mean_Ip_r = BaseDehazer.windowSumFilter(guide_sub(:, :, 1).*target_sub, r_sub) ./ N;
+            mean_Ip_g = BaseDehazer.windowSumFilter(guide_sub(:, :, 2).*target_sub, r_sub) ./ N;
+            mean_Ip_b = BaseDehazer.windowSumFilter(guide_sub(:, :, 3).*target_sub, r_sub) ./ N;
 
             % covariance of (I, p) in each local patch.
             cov_Ip_r = mean_Ip_r - mean_I_r .* mean_p;
@@ -111,12 +111,12 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
             %           rr, rg, rb
             %   Sigma = rg, gg, gb
             %           rb, gb, bb
-            var_I_rr = windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 1), r_sub) ./ N - mean_I_r .*  mean_I_r; 
-            var_I_rg = windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 2), r_sub) ./ N - mean_I_r .*  mean_I_g; 
-            var_I_rb = windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_r .*  mean_I_b; 
-            var_I_gg = windowSumFilter(guide_sub(:, :, 2).*guide_sub(:, :, 2), r_sub) ./ N - mean_I_g .*  mean_I_g; 
-            var_I_gb = windowSumFilter(guide_sub(:, :, 2).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_g .*  mean_I_b; 
-            var_I_bb = windowSumFilter(guide_sub(:, :, 3).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_b .*  mean_I_b; 
+            var_I_rr = BaseDehazer.windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 1), r_sub) ./ N - mean_I_r .*  mean_I_r; 
+            var_I_rg = BaseDehazer.windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 2), r_sub) ./ N - mean_I_r .*  mean_I_g; 
+            var_I_rb = BaseDehazer.windowSumFilter(guide_sub(:, :, 1).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_r .*  mean_I_b; 
+            var_I_gg = BaseDehazer.windowSumFilter(guide_sub(:, :, 2).*guide_sub(:, :, 2), r_sub) ./ N - mean_I_g .*  mean_I_g; 
+            var_I_gb = BaseDehazer.windowSumFilter(guide_sub(:, :, 2).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_g .*  mean_I_b; 
+            var_I_bb = BaseDehazer.windowSumFilter(guide_sub(:, :, 3).*guide_sub(:, :, 3), r_sub) ./ N - mean_I_b .*  mean_I_b; 
 
             N = h*w;
             top = cat(2,reshape(var_I_rr,1,1,[]),reshape(var_I_rg,1,1,[]),reshape(var_I_rb,1,1,[]));
@@ -136,10 +136,10 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
             
             b = mean_p - a(:, :, 1) .* mean_I_r - a(:, :, 2) .* mean_I_g - a(:, :, 3) .* mean_I_b; % Eqn. (15) in the paper;
 
-            mean_a(:, :, 1) = windowSumFilter(a(:, :, 1), r_sub)./N;
-            mean_a(:, :, 2) = windowSumFilter(a(:, :, 2), r_sub)./N;
-            mean_a(:, :, 3) = windowSumFilter(a(:, :, 3), r_sub)./N;
-            mean_b = windowSumFilter(b, r_sub)./N;
+            mean_a(:, :, 1) = BaseDehazer.windowSumFilter(a(:, :, 1), r_sub)./N;
+            mean_a(:, :, 2) = BaseDehazer.windowSumFilter(a(:, :, 2), r_sub)./N;
+            mean_a(:, :, 3) = BaseDehazer.windowSumFilter(a(:, :, 3), r_sub)./N;
+            mean_b = BaseDehazer.windowSumFilter(b, r_sub)./N;
 
             mean_a = imresize(mean_a, [size(guide, 1), size(guide, 2)], 'bilinear'); % bilinear is recommended
             mean_b = imresize(mean_b, [size(guide, 1), size(guide, 2)], 'bilinear');

@@ -258,7 +258,7 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             radius_eval_fun = @(r) min(1, 3*max(0.001, r-0.1));
             radius_reliability = radius_eval_fun(radius_std./max(radius_std(:)));
             data_term_weight   = bin_eval_fun(bin_count_map).*radius_reliability;
-            transmission = wls_optimization(transmission_estimation, data_term_weight, img_hazy);
+            transmission = self.wls_optimization(transmission_estimation, data_term_weight, img_hazy);
 
 
             %% Dehazing
