@@ -39,13 +39,14 @@ classdef (Sealed) ZhuDehazer < BaseDehazer
             initialTic = tic;
             [dR, dP] = self.calVSMap(img);
 			% There's potentially an error in the authors original code. The paper specified refining the depth map after performing the patch minimum ('dR' in code, 'd_r' in paper)
-            % however the author's code used the pixel depth map ('dP' in code, 'd' in paper).
-            % In any case, following the paper, dR is used here.
-            % Interestingly, this might have already been spotted by the authors of the DehazeNet paper, without them explicitly saying so.
-            % In that paper, unlike the other methods they compare against, they use two values for the results of this method.
-            % The first set of results they say is from the author's code (presumably the same code this was adapted from)
-            % The second set of results they say is from their implementation of this method, and their implementation has much better results.
-            % I can't help but speculate that they also spotted the error and corrected but decided to keep the original results in their comparison as well for some reason.
+			% however the author's code used the pixel depth map ('dP' in code, 'd' in paper).
+			% In any case, following the paper, dR is used here.
+			% Interestingly, this might have already been spotted by the authors of the DehazeNet paper, without them explicitly saying so.
+			% In that paper, unlike the other methods they compare against, they use two values for the results of this method.
+			% The first set of results they say is from the author's code (presumably the same code this was adapted from)
+			% The second set of results they say is from their implementation of this method, and their implementation has much better results.
+			% I can't help but speculate that they also spotted the error and corrected but decided to keep the original results in their comparison as well for some reason.
+
             refineDR = BaseDehazer.fastGuidedFilterColor(img, dR, self.r, self.eps, self.r/4); 
 
             initialTime = toc(initialTic);

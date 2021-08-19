@@ -76,7 +76,7 @@ classdef (Abstract) BaseDehazer < handle & matlab.mixin.Heterogeneous
         end
         
         function q = fastGuidedFilterColor(guide, target, r, eps, s)
-            %   GUIDEDFILTER_COLOR   O(1) time implementation of guided filter using a color image as the guidance.
+            %   GUIDEDFILTER_COLOR   O(N) time implementation of guided filter using a color image as the guidance.
             %
             %   - guidance image: I (should be a color (RGB) image)
             %   - filtering input image: p (should be a gray-scale/single channel image)
