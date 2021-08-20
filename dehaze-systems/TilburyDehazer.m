@@ -44,7 +44,7 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
         function system = bestLocal
             %% Returns a Local type TilburyDehazer with the best found parameters
             system = TilburyDehazer('local',10.1994823198406,1.28476110308647,0.851134429960658,5.41478542049196e-05,42,39,40);
-            system.rename("TilburyLocal")
+            system.rename("TilburyLocal");
         end
         
         function system = bestOpening

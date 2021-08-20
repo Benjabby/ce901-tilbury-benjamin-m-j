@@ -54,6 +54,7 @@ function [means, meanStrings, stdStrings] = groupResults(results)
                     val = results.(seq).(name).(metric);
                 end
                 
+                % Seconds to seconds-per-megapixel
                 if contains(metric,"time"), val = val./mp; end
                 
                 if isfield(groupTotals.(group).(name), metric)
@@ -63,7 +64,7 @@ function [means, meanStrings, stdStrings] = groupResults(results)
                 end
                 
                 if isfield(groupTotals.all.(name), metric)
-                    groupTotals.all.(name).(metric) = [groupTotals.(group).(name).(metric) val];
+                    groupTotals.all.(name).(metric) = [groupTotals.all.(name).(metric) val];
                 else
                     groupTotals.all.(name).(metric) = val;
                 end

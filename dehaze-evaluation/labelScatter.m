@@ -26,12 +26,14 @@ function labelScatter(table, metricX, metricY,type)
     
     fullCols = cat(1,existingCols,myCols);
     
-    names = string(table.Row)';
+    names = string(table.Row);
     
     cols = fullCols(1:length(names),:);
     
-    scatter([table.(metricX)],[table.(metricY)],64,cols,'filled');
-%     labelpoints([table.(metricX)],[table.(metricY)],names,'NE',0.15,1);
+%     gscatter([table.(metricX)],[table.(metricY)],names,cols,'.',52);
+    scatter([table.(metricX)],[table.(metricY)],120,cols,'filled');
+    labelpoints([table.(metricX)],[table.(metricY)],names','N',0.15,1);
+%     legend(names);
     
     if type=="append"
         hold off
