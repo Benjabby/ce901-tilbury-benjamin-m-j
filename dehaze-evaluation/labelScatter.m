@@ -1,4 +1,4 @@
-function labelScatter(table, metricX, metricY,type)
+function labelScatter(table, metricX, metricY, ignores, type)
     if ~exist('type','var')
         type='new';
     end
@@ -29,6 +29,8 @@ function labelScatter(table, metricX, metricY,type)
     names = string(table.Row);
     
     cols = fullCols(1:length(names),:);
+    
+%     if ~exist('ignores','var') && ~isempty(ignores)
     
 %     gscatter([table.(metricX)],[table.(metricY)],names,cols,'.',52);
     scatter([table.(metricX)],[table.(metricY)],120,cols,'filled');

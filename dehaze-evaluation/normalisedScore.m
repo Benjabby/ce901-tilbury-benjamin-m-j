@@ -1,7 +1,9 @@
-function [scores, scaling] = normalisedScore(results, scaling)
+function [scores, scaling] = normalisedScore(results, scaling, firstNormOnly)
     
 %     asError = (nargin>1 && asError);
     newScaling = ~(nargin>1 && ~isempty(scaling));
+    
+    firstOnly = nargin>2 && ~isempty(firstNormOnly) && firstNormOnly;
     
     varNames = ["mppsTotal","psnr","msssim","fade","niqe","colDiff","mic","speedqa","TError","AError"];
 
@@ -121,19 +123,20 @@ function [scores, scaling] = normalisedScore(results, scaling)
 
     %% Turn the SPMP into MPPS and renormalise everything
     compact(:,1) = 1./compact(:,1);
+    
     if newScaling
         scaling.final = cat(1,min(compact,[],1),max(compact,[],1));
     end
     
-%     if asError
-%         big = scaling.final(1,:);
-%         small = scaling.final(2,:);
-%     else
-        big = scaling.final(2,:);
-        small = scaling.final(1,:);
-%     end
+    big = scaling.final(2,:);
+    small = scaling.final(1,:);
     
-    scores = (compact-small)./(big-small);
-
-    
+    if firstOnly
+        compact(:,1) = (compact(:,1)./big(1));
+%         compact(:,1) = (compact(:,1)-small(1))./(big(1)-small(1));
+        scores = compact;
+    else
+        
+        scores = (compact-small)./(big-small);
+    end
 end

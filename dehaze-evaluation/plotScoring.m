@@ -1,4 +1,4 @@
-function plotScoring(results, comparings, excludeComparings)
+function plotScoring(results, comparings, excludeComparings, firstNormOnly)
     % Comparings are the names of methods excluded from the scale calculation.
     % In my case this will be my methods as they are to be compared against
     % the scales of the already evaluated methods.
@@ -6,6 +6,8 @@ function plotScoring(results, comparings, excludeComparings)
     seqs = string(fieldnames(results))';
     names = string(fieldnames(results.(seqs(1))))';
     names(strcmp(names,'props')) = [];
+    
+    firstOnly = (nargin>3 && ~isempty(firstNormOnly) && firstNormOnly);
     
     if nargin>1 && ~isempty(comparings)
         partA = struct();
@@ -39,7 +41,7 @@ function plotScoring(results, comparings, excludeComparings)
         igrey = 0;
     end
     
-    [scores, scaling] = normalisedScore(partA);
+    [scores, scaling] = normalisedScore(partA,[],firstOnly);
     
     
     fullCols = [
@@ -68,7 +70,7 @@ function plotScoring(results, comparings, excludeComparings)
     end
     
     if ~isempty(partB) && (nargin<=2 || ~excludeComparings)
-        scoresB = normalisedScore(partB,scaling);
+        scoresB = normalisedScore(partB,scaling,firstOnly);
         scores = cat(1,scores,scoresB);
     end
 
@@ -78,6 +80,6 @@ function plotScoring(results, comparings, excludeComparings)
     for i=1:length(bars)
        bars(i).CData = squeeze(cols(i,:,:));
     end
-    set(gca,'XTickLabel',["Realtime Performance","Visibility Improvement","Naturalness Quality","Video Consistency","Model Conformity"]);
+    set(gca,'XTickLabel',["Realtime Capability","Visibility Improvement","Naturalness Quality","Video Consistency","Model Conformity"]);
     legend(names);
 end
