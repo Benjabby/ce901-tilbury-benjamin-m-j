@@ -92,7 +92,7 @@ classdef (Sealed) TarelDehazer < BaseDehazer
             swm=medfilt2(sw, [self.sv, self.sv], 'symmetric');
             b=wm-swm;
             %compute planar assumption bound	
-			c = repmat(exp((log(0.05)*self.SequenceState.rcalib)./(self.minvd*max((1:m)-self.vh,0)))',1,n);
+			c = 1-repmat(exp((log(0.05)*self.SequenceState.rcalib)./(self.minvd*max((1:m)-self.vh,0)))',1,n);
             % combining bounds
             b=min(b,c);
             % infered athmospheric veil respecting w and b bounds

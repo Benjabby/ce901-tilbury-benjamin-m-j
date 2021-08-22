@@ -533,13 +533,13 @@ function [results, systems, metrics, sequences, autosave, sample, seed] = valida
     
     if ~isfield(params,'Systems') || isempty(params.Systems)
         % Unoptimised TilburyDehazer parameters
-        unoptTilbury = TilburyDehazer.initial;
+%         unoptTilbury = TilburyDehazer.initial;
         % Optimised TilburyDehazer parameters (default values in class)
         % Currently excluded, need to re-optimise...
 %         optTilbury = TilburyDehazer;
 %         optTilbury.rename("TilburyOptimised"); % Rename to avoid name clash
         
-        systems = [BermanDehazer, CaiDehazer, ChenDehazer, HeDehazer, LiDehazer, TarelDehazer, unoptTilbury, TsaiDehazer, ZhuDehazer, UnrefinedDehazer];
+        systems = [BermanDehazer, CaiDehazer, ChenDehazer, HeDehazer, LiDehazer, TarelDehazer, TsaiDehazer, ZhuDehazer, TilburyDehazer.bestLocal, TilburyDehazer.bestGlobal, TilburyDehazer.bestOpening];
     elseif isa(params.Systems, "BaseDehazer")
         systems = params.Systems;
     elseif isa(params.Systems, "string")
