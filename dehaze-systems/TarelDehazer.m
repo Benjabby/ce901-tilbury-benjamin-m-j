@@ -55,7 +55,7 @@ classdef (Sealed) TarelDehazer < BaseDehazer
             
             if (self.balance==0.0) % global white balance on clear pixels
                 w=min(img,[],3); 
-                ival = quantile(w(:),[.99]);
+                ival = quantile(w(:),.99);
                 [rind,cind]=find(w>=ival);
                 sel(:,1)=img(sub2ind(size(img),rind,cind,ones(size(rind))));
                 sel(:,2)=img(sub2ind(size(img),rind,cind,2*ones(size(rind))));
@@ -65,8 +65,7 @@ classdef (Sealed) TarelDehazer < BaseDehazer
                 img(:,:,1)=img(:,:,1)./white(1);
                 img(:,:,2)=img(:,:,2)./white(2);
                 img(:,:,3)=img(:,:,3)./white(3);
-            end
-            if (self.balance>0.0) % local white balance
+            elseif (self.balance>0.0) % local white balance
                 fo(:,:,1)=medfilt2(img(:,:,1), [self.sv, self.sv], 'symmetric');
                 fo(:,:,2)=medfilt2(img(:,:,2), [self.sv, self.sv], 'symmetric');
                 fo(:,:,3)=medfilt2(img(:,:,3), [self.sv, self.sv], 'symmetric');
@@ -124,7 +123,7 @@ classdef (Sealed) TarelDehazer < BaseDehazer
                 end
                 %nbr=mean(r,3);
             end
-            %assignin("base","nbr",nbr);
+            
             % final gamma correction 
             u=r.^(1.0/self.gfactor);
 
