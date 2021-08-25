@@ -1,5 +1,5 @@
 classdef (Sealed) BermanDehazer < BaseDehazer
-
+%% You would not believe the effort it took to rewrite this with no for-loops.
     properties (Constant)
         FrameDelay  = 0;
         PredictsA   = true;
@@ -22,18 +22,18 @@ classdef (Sealed) BermanDehazer < BaseDehazer
         %% Dehazing parameters
         gamma       = 1;
         lambda      = 0.1;
-        leave_haze  = 1.06;
-        trans_min   = 0.1;
+        omega       = 1.06;
+        t0          = 0.1;
     end
     
     methods
-        function self = BermanDehazer(gamma, lambda, leave_haze, trans_min, Amin, Amax, N, spacing, K, thres)
+        function self = BermanDehazer(gamma, lambda, omega, t0, Amin, Amax, N, spacing, K, thres)
             self = self@BaseDehazer;
             
             if nargin>0 && ~isempty(gamma), self.gamma = gamma; end
             if nargin>1 && ~isempty(lambda), self.lambda = lambda; end
-            if nargin>2 && ~isempty(leave_haze), self.leave_haze = leave_haze; end
-            if nargin>3 && ~isempty(trans_min), self.trans_min = trans_min; end
+            if nargin>2 && ~isempty(omega), self.omega = omega; end
+            if nargin>3 && ~isempty(t0), self.t0 = t0; end
             if nargin>4 && ~isempty(Amin), self.Amin = Amin; end
             if nargin>5 && ~isempty(Amax), self.Amax = Amax; end
             if nargin>6 && ~isempty(N), self.N = N; end
@@ -46,11 +46,11 @@ classdef (Sealed) BermanDehazer < BaseDehazer
         
         function [predImage, predT, predA, timeImage, timeA] = dehazeFrame(self, img, ~)
             Atic = tic;
-            predA = self.estimate_airlight(img);
+            predA = self.estimateA(img);
             predA = reshape(predA, 1,1,3);
             timeA = toc(Atic);
             predTic = tic;
-            [predImage, predT] = self.non_local_dehazing(img, predA);
+            [predImage, predT] = self.nonLocalDehazing(img, predA);
             predImage = BaseDehazer.clip(predImage);
             predT = BaseDehazer.clip(predT);
             timeImage = toc(predTic);
@@ -58,15 +58,15 @@ classdef (Sealed) BermanDehazer < BaseDehazer
     end
        
     methods (Access = protected)
-        function [ Aout ] = estimate_airlight(self, img)
+        function [ Aout ] = estimateA(self, img)
             %% Convert input image to an indexed image
             [img_ind, points] = rgb2ind(img, self.N);
-            [h,w,~] = size(img);
+            [m,n,~] = size(img);
             % Remove empty clusters
-            idx_in_use = unique(img_ind(:));
-            idx_to_remove = setdiff(0:(size(points,1)-1),idx_in_use);
-            points(idx_to_remove+1,:) = [];
-			img_ind_sequential = changem(img_ind,1:length(idx_in_use),idx_in_use);
+            idxToUse = unique(img_ind(:));
+            idxToRemove = setdiff(0:(size(points,1)-1),idxToUse);
+            points(idxToRemove+1,:) = [];
+			imgSeq = changem(img_ind,1:length(idxToUse),idxToUse);
             % img_ind_sequential = zeros(h,w);
             % for kk = 1:length(idx_in_use)
                 % img_ind_sequential(img_ind==idx_in_use(kk)) = kk;
@@ -75,15 +75,15 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             % correspond to points
 
             % Count the occurences if each index - this is the clusters' weight
-            [points_weight,~] = histcounts(img_ind_sequential(:),size(points,1));
-            points_weight = points_weight./(h*w);
+            [weights,~] = histcounts(imgSeq(:),size(points,1));
+            weights = weights./(m*n);
             if ~ismatrix(points), points = reshape(points,[],3); end % verify dim
 
             %% Define arrays of candidate air-light values and angles
-            angle_list = reshape(linspace(0, pi, self.K),[],1);
+            angleList = reshape(linspace(0, pi, self.K),[],1);
             % Use angle_list(1:end-1) since angle_list(end)==pi, which is the same line
             % in 2D as since angle_list(1)==0
-            directions_all = [sin(angle_list(1:end-1)) , cos(angle_list(1:end-1)) ];
+            allDirections = [sin(angleList(1:end-1)) , cos(angleList(1:end-1)) ];
 
             % Air-light candidates in each color channel
             ArangeR = self.Amin(1):self.spacing:self.Amax(1);
@@ -92,21 +92,21 @@ classdef (Sealed) BermanDehazer < BaseDehazer
 
             %% Estimate air-light in each pair of color channels
             % Estimate RG
-            Aall = self.generate_Avals(ArangeR, ArangeG);
-            [~, AvoteRG] = self.vote_2D(points(:,1:2), points_weight, directions_all, Aall);
+            Aall = self.generateAValues(ArangeR, ArangeG);
+            [~, AvoteRG] = self.vote2D(points(:,1:2), weights, allDirections, Aall);
             % Estimate GB
-            Aall = self.generate_Avals(ArangeG, ArangeB);
-            [~, AvoteGB] = self.vote_2D(points(:,2:3), points_weight, directions_all, Aall);
+            Aall = self.generateAValues(ArangeG, ArangeB);
+            [~, AvoteGB] = self.vote2D(points(:,2:3), weights, allDirections, Aall);
             % Estimate RB
-            Aall = self.generate_Avals(ArangeR, ArangeB);
-            [~, AvoteRB] = self.vote_2D(points(:,[1,3]), points_weight, directions_all, Aall);
+            Aall = self.generateAValues(ArangeR, ArangeB);
+            [~, AvoteRB] = self.vote2D(points(:,[1,3]), weights, allDirections, Aall);
 
             %% Find most probable airlight from marginal probabilities (2D arrays)
             % Normalize (otherwise the numbers are quite large)
-            max_val = max( [max(AvoteRB(:)) , max(AvoteRG(:)) , max(AvoteGB(:)) ]);
-            AvoteRG2 = AvoteRG./max_val;
-            AvoteGB2 = AvoteGB./max_val;
-            AvoteRB2 = AvoteRB./max_val;
+            maxVal = max( [max(AvoteRB(:)) , max(AvoteRG(:)) , max(AvoteGB(:)) ]);
+            AvoteRG2 = AvoteRG./maxVal;
+            AvoteGB2 = AvoteGB./maxVal;
+            AvoteRB2 = AvoteRB./maxVal;
             % Generate 3D volumes from 3 different 2D arrays
             A11 = repmat( reshape(AvoteRG2, length(ArangeG),length(ArangeR))', 1,1,length(ArangeB));
             tmp = reshape(AvoteRB2, length(ArangeB),length(ArangeR))';
@@ -119,7 +119,7 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             Aout = [ArangeR(idx_r), ArangeG(idx_g), ArangeB(idx_b)];
         end
         
-        function Aall = generate_Avals(self, Avals1, Avals2)
+        function Aall = generateAValues(~, Avals1, Avals2)
             %Generate a list of air-light candidates of 2-channels, using two lists of
             %values in a single channel each
             %Aall's length is length(Avals1)*length(Avals2)
@@ -130,189 +130,145 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             Aall = [A1, A2];
         end
         
-%         function [Aout, Avote2] = vote_2D(self, points, points_weight, directions_all, Aall)
-% 
-%             n_directions = size(directions_all,1);
-%             accumulator_votes_idx = false(size(Aall,1), size(points,1), n_directions);
-%             for i_point = 1:size(points,1)
-%                  % save time and ignore irelevant points from the get-go
-%                 idx_to_use = find( (Aall(:, 1) > points(i_point, 1)) & (Aall(:, 2) > points(i_point, 2)));
-%                 if isempty(idx_to_use), continue; end
-% 
-%                 % calculate distance between all A options and the line defined by
-%                 % i_point and i_direction. If the distance is smaller than a thres,
-%                 % increase the cell in accumulator
-%                 dist1 = sqrt(sum([Aall(idx_to_use, 1)-points(i_point, 1), Aall(idx_to_use, 2)-points(i_point, 2)].^2,2));
-%                 %dist1 = dist1 - min(dist1);
-%                 dist1 = dist1./sqrt(2) + 1;
-%                 for i_direction = 1:n_directions
-%                     
-% 
-%                     dist =  -points(i_point, 1)*directions_all(i_direction,2) + ...
-%                         points(i_point, 2)*directions_all(i_direction,1) + ...
-%                         Aall(idx_to_use, 1)*directions_all(i_direction,2) - ...
-%                         Aall(idx_to_use, 2)*directions_all(i_direction,1);
-%                     idx = abs(dist)<2*self.thres.*dist1;
-%                     if ~any(idx), continue; end
-% 
-%                     idx_full = idx_to_use(idx);
-%                     accumulator_votes_idx(idx_full, i_point,i_direction) = true;
-%                 end
-%             end
-% 
-%             accumulator_votes_idx2 = (sum(uint8(accumulator_votes_idx),2))>=2; 
-%             accumulator_votes_idx = bsxfun(@and, accumulator_votes_idx ,accumulator_votes_idx2);
-%             accumulator_unique = zeros(size(Aall,1),1);
-%             for iA = 1:size(Aall,1)
-%                 idx_to_use = find(Aall(iA, 1) > points(:, 1) & (Aall(iA, 2) > points(:, 2)));
-%                 points_dist = sqrt((Aall(iA,1) - points(idx_to_use,1)).^2+(Aall(iA,2) - points(idx_to_use,2)).^2);
-%                 points_weight_dist = points_weight(idx_to_use).*(5.*exp(-reshape(points_dist,1,[]))+1); 
-%                 accumulator_unique(iA) = sum(points_weight_dist(any(accumulator_votes_idx(iA,idx_to_use,:),3)));
-%             end
-% 
-%             [~, Aestimate_idx] = max(accumulator_unique);
-%             Aout = Aall(Aestimate_idx,:);
-%             Avote2 = accumulator_unique; 
-%         end
-		
-		function [Aout, Avote2] = vote_2D(self, points, points_weight, directions_all, Aall)
+
+		function [Aout, Avote2] = vote2D(self, points, pointWeight, allDirections, Aall)
 			
 			check = bsxfun(@and,Aall(:,1)>points(:,1)',Aall(:,2)>points(:,2)');
 			
 			dist = pdist2(Aall,points);
 			comp = dist./sqrt(2) + 1;
 			
-			p1 = -points(:,1) * directions_all(:,2)' + points(:,2) * directions_all(:,1)';
+			p1 = -points(:,1) * allDirections(:,2)' + points(:,2) * allDirections(:,1)';
 			p1 = reshape(p1,[1 size(p1)]);
 			
-			p2 = Aall(:, 1)*directions_all(:,2)' - Aall(:, 2)*directions_all(:,1)';
+			p2 = Aall(:, 1)*allDirections(:,2)' - Aall(:, 2)*allDirections(:,1)';
 			p2 = reshape(p2, [size(p2,1) 1 size(p2,2)]);
 			
 			val = abs(p1+p2); %bsxfun(@plus,p1,p2);
 			
-			accumulator_votes_idx = bsxfun(@and, check, val<2*self.thres.*comp);
+			accVotes = bsxfun(@and, check, val<2*self.thres.*comp);
 
-			accumulator_votes_idx2 = (sum(uint8(accumulator_votes_idx),2))>=2; 
-			accumulator_votes_idx = bsxfun(@and, accumulator_votes_idx ,accumulator_votes_idx2);
+			accVotes2 = (sum(uint8(accVotes),2))>=2; 
+			accVotes = bsxfun(@and, accVotes ,accVotes2);
 			
-			points_weight_dist = (5.*exp(-dist)+1).*points_weight; 
-			indx = bsxfun(@and,any(accumulator_votes_idx,3),check);
-			accumulator_unique = sum(points_weight_dist.*indx,2);
+			pointWeightDist = (5.*exp(-dist)+1).*pointWeight; 
+			indx = bsxfun(@and,any(accVotes,3),check);
+			accumulator_unique = sum(pointWeightDist.*indx,2);
 
 			[~, Aestimate_idx] = max(accumulator_unique);
 			Aout = Aall(Aestimate_idx,:);
 			Avote2 = accumulator_unique; 
 		end
         
-        function [img_dehazed, transmission] = non_local_dehazing(self, img_hazy, air_light)
-            [h,w,n_colors] = size(img_hazy);
-            img_hazy_corrected = img_hazy.^self.gamma;
+        function [predImage, predT] = nonLocalDehazing(self, hazyImage, A)
+            [m,n,n_colors] = size(hazyImage);
+            hazyImage = hazyImage.^self.gamma;
             %% Find Haze-lines
             % Translate the coordinate system to be air_light-centric (Eq. (3))
 			
-			dist_from_airlight = img_hazy_corrected - air_light;
+			ADist = hazyImage - A;
 
             % Calculate radius (Eq. (5))
-            radius = sqrt( dist_from_airlight(:,:,1).^2 + dist_from_airlight(:,:,2).^2 +dist_from_airlight(:,:,3).^2 );
+            radius = sqrt( ADist(:,:,1).^2 + ADist(:,:,2).^2 +ADist(:,:,3).^2 );
 
             % Cluster the pixels to haze-lines
             % Use a KD-tree impementation for fast clustering according to their angles
-            dist_unit_radius = reshape(dist_from_airlight,[h*w,n_colors]);
-            dist_norm = sqrt(sum(dist_unit_radius.^2,2));
-            dist_unit_radius = bsxfun(@rdivide, dist_unit_radius, dist_norm);
+            distRadius = reshape(ADist,[m*n,n_colors]);
+            distNorm = sqrt(sum(distRadius.^2,2));
+            distRadius = bsxfun(@rdivide, distRadius, distNorm);
             
             mdl = KDTreeSearcher(self.KD_points);
-            ind = knnsearch(mdl, dist_unit_radius);
+            ind = knnsearch(mdl, distRadius);
 
 
             %% Estimating Initial Transmission
 
             % Estimate radius as the maximal radius in each haze-line (Eq. (11))
             k = accumarray(ind,radius(:),[self.KD_n,1],@max);
-            radius_new = reshape( k(ind), h, w);
+            newRadius = reshape( k(ind), m, n);
 
             % Estimate transmission as radii ratio (Eq. (12))
-            transmission_estimation = radius./radius_new;
+            transEst = radius./newRadius;
 
-            % Limit the transmission to the range [trans_min, 1] for numerical stability
-            self.trans_min = 0.1;
-            transmission_estimation = min(max(transmission_estimation, self.trans_min),1);
+            % Limit the transmission to the range [t0, 1] for numerical stability
+            self.t0 = 0.1;
+            transEst = min(max(transEst, self.t0),1);
 
 
             %% Regularization
 
             % Apply lower bound from the image (Eqs. (13-14))
-            trans_lower_bound = 1 - min(bsxfun(@rdivide,img_hazy_corrected,reshape(air_light,1,1,3)) ,[],3);
-            transmission_estimation = max(transmission_estimation, trans_lower_bound);
+            lowerBound = 1 - min(bsxfun(@rdivide,hazyImage,reshape(A,1,1,3)) ,[],3);
+            transEst = max(transEst, lowerBound);
 
             % Solve optimization problem (Eq. (15))
             % find bin counts for reliability - small bins (#pixels<50) do not comply with 
             % the model assumptions and should be disregarded
             bin_count       = accumarray(ind,1,[self.KD_n,1]);
-            bin_count_map   = reshape(bin_count(ind),h,w);
+            bin_count_map   = reshape(bin_count(ind),m,n);
             bin_eval_fun    = @(x) min(1, x/50);
 
             % Calculate std - this is the data-term weight of Eq. (15)
             K_std = accumarray(ind,radius(:),[self.KD_n,1],@std);
-            radius_std = reshape( K_std(ind), h, w);
-            radius_eval_fun = @(r) min(1, 3*max(0.001, r-0.1));
-            radius_reliability = radius_eval_fun(radius_std./max(radius_std(:)));
-            data_term_weight   = bin_eval_fun(bin_count_map).*radius_reliability;
-            transmission = self.wls_optimization(transmission_estimation, data_term_weight, img_hazy);
+            radiusStd = reshape( K_std(ind), m, n);
+            radiusEval = @(r) min(1, 3*max(0.001, r-0.1));
+            radiusReliability = radiusEval(radiusStd./max(radiusStd(:)));
+            dataWeight   = bin_eval_fun(bin_count_map).*radiusReliability;
+            predT = self.wlsOptimsation(transEst, dataWeight, hazyImage);
 
 
             %% Dehazing
             % (Eq. (16))
              % leave a bit of haze for a natural look (set to 1 to reduce all haze)
-			img_dehazed = (img_hazy_corrected - (1-self.leave_haze.*transmission).*air_light)./ max(transmission,self.trans_min);
+			predImage = (hazyImage - (1-self.omega.*predT).*A)./ max(predT,self.t0);
             
             % Limit each pixel value to the range [0, 1] (avoid numerical problems)
-            img_dehazed = BaseDehazer.clip(img_dehazed);
-            img_dehazed = img_dehazed.^(1/self.gamma); % radiometric correction
+            predImage = BaseDehazer.clip(predImage);
+            predImage = predImage.^(1/self.gamma); % radiometric correction
 
             % For display, we perform a global linear contrast stretch on the output, 
             % clipping 0.5% of the pixel values both in the shadows and in the highlights 
-            percen = [0.005, 0.995];
-            minn=min(img_dehazed(:));
-            img_dehazed=img_dehazed-minn;
-            img_dehazed=img_dehazed./max(img_dehazed(:));
+            percent = [0.005, 0.995];
+            minn=min(predImage(:));
+            predImage=predImage-minn;
+            predImage=predImage./max(predImage(:));
 
             % limit the change magnitude so the WB would not be drastically changed
-            contrast_limit = stretchlim(img_dehazed,percen);
+            contrastLimit = stretchlim(predImage,percent);
             val = 0.2;
-            contrast_limit(2,:) = max(contrast_limit(2,:), 0.2);
-            contrast_limit(2,:) = val*contrast_limit(2,:) + (1-val)*max(contrast_limit(2,:), mean(contrast_limit(2,:)));
-            contrast_limit(1,:) = val*contrast_limit(1,:) + (1-val)*min(contrast_limit(1,:), mean(contrast_limit(1,:)));
-            img_dehazed=imadjust(img_dehazed,contrast_limit,[],1);
+            contrastLimit(2,:) = max(contrastLimit(2,:), 0.2);
+            contrastLimit(2,:) = val*contrastLimit(2,:) + (1-val)*max(contrastLimit(2,:), mean(contrastLimit(2,:)));
+            contrastLimit(1,:) = val*contrastLimit(1,:) + (1-val)*min(contrastLimit(1,:), mean(contrastLimit(1,:)));
+            predImage=imadjust(predImage,contrastLimit,[],1);
 
         end
         
-        function out = wls_optimization(self, in, data_weight, guidance)
-            small_num = 0.00001;
+        function out = wlsOptimsation(self, in, weights, guide)
+            eps = 0.00001;
 
-            [h,w,~] = size(guidance);
-            k = h*w;
-            guidance = rgb2gray(guidance);
+            [m,n,~] = size(guide);
+            k = m*n;
+            guide = rgb2gray(guide);
 
             % Compute affinities between adjacent pixels based on gradients of guidance
-            dy = diff(guidance, 1, 1);
-            dy = -self.lambda./(sum(abs(dy).^2,3) + small_num);
+            dy = diff(guide, 1, 1);
+            dy = -self.lambda./(sum(abs(dy).^2,3) + eps);
             dy = padarray(dy, [1 0], 'post');
             dy = dy(:);
 
-            dx = diff(guidance, 1, 2); 
-            dx = -self.lambda./(sum(abs(dx).^2,3) + small_num);
+            dx = diff(guide, 1, 2); 
+            dx = -self.lambda./(sum(abs(dx).^2,3) + eps);
             dx = padarray(dx, [0 1], 'post');
             dx = dx(:);
 
 
             % Construct a five-point spatially inhomogeneous Laplacian matrix
             B = [dx, dy];
-            d = [-h,-1];
+            d = [-m,-1];
             tmp = spdiags(B,d,k,k);
 
             ea = dx;
-            we = padarray(dx, h, 'pre'); we = we(1:end-h);
+            we = padarray(dx, m, 'pre'); we = we(1:end-m);
             so = dy;
             no = padarray(dy, 1, 'pre'); no = no(1:end-1);
 
@@ -320,18 +276,18 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             Asmoothness = tmp + tmp' + spdiags(D, 0, k, k);
 
             % Normalize data weight
-            data_weight = data_weight - min(data_weight(:)) ;
-            data_weight = 1.*data_weight./(max(data_weight(:))+small_num);
+            weights = weights - min(weights(:)) ;
+            weights = 1.*weights./(max(weights(:))+eps);
 
             % Make sure we have a boundary condition for the top line:
             % It will be the minimum of the transmission in each column
             % With reliability 0.8
-            reliability_mask = data_weight(1,:) < 0.6; % find missing boundary condition
+            mask = weights(1,:) < 0.6; % find missing boundary condition
             in_row1 = min( in,[], 1);
-            data_weight(1,reliability_mask) = 0.8;
-            in(1,reliability_mask) = in_row1(reliability_mask);
+            weights(1,mask) = 0.8;
+            in(1,mask) = in_row1(mask);
 
-            Adata = spdiags(data_weight(:), 0, k, k);
+            Adata = spdiags(weights(:), 0, k, k);
 
             A = Adata + Asmoothness;
             b = Adata*in(:);
@@ -339,7 +295,7 @@ classdef (Sealed) BermanDehazer < BaseDehazer
             % Solve
 %             out = lsqnonneg(A,b);
             out = A\b;
-            out = reshape(out, h, w);
+            out = reshape(out, m, n);
         end
     end
 	

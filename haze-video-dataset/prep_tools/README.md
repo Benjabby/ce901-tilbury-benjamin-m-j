@@ -1,1 +1,1 @@
-Insert the required repositories here or run the 'setup.py' script
+Insert the required repositories here

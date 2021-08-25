@@ -9,33 +9,33 @@ classdef (Sealed) CaiDehazer < BaseDehazer
         % Defaults from paper & original code (paper params supersede code params)
         omega       = 0.7;
         t0          = 0.1;
-        D_r         = 20;
+        r         = 20;
         eps         = 0.0001;
         f           = 1;
         rho         = 0.1;
-        A_r         = 15;
+        rA         = 15;
         downsample  = 1;
         
-        lambda_t;
+        lambda;
     end
     
     methods
-        function self = CaiDehazer(omega, D_r, eps, A_r, t0, f, rho, downsample)
+        function self = CaiDehazer(omega, r, eps, rA, t0, f, rho, downsample)
             self = self@BaseDehazer;
             
             if nargin>0 && ~isempty(omega), self.omega = omega; end
-            if nargin>1 && ~isempty(D_r), self.D_r = D_r; end
+            if nargin>1 && ~isempty(r), self.r = r; end
             if nargin>2 && ~isempty(eps), self.eps = eps; end
-            if nargin>3 && ~isempty(A_r), self.A_r = A_r; end
+            if nargin>3 && ~isempty(rA), self.rA = rA; end
             if nargin>4 && ~isempty(t0), self.t0 = t0; end
             if nargin>5 && ~isempty(f), self.f = f; end
             if nargin>6 && ~isempty(rho), self.rho = rho; end
             if nargin>7 && ~isempty(downsample), self.downsample = downsample; end
             
-            self.lambda_t=hann(self.f*2+3);
-            self.lambda_t(self.lambda_t==0)=[];
-            self.lambda_t=self.lambda_t./sum(self.lambda_t);
-            self.lambda_t=reshape(self.lambda_t,1,1,numel(self.lambda_t));
+            self.lambda=hann(self.f*2+3);
+            self.lambda(self.lambda==0)=[];
+            self.lambda=self.lambda./sum(self.lambda);
+            self.lambda=reshape(self.lambda,1,1,numel(self.lambda));
             
         end
         
@@ -53,7 +53,7 @@ classdef (Sealed) CaiDehazer < BaseDehazer
             minFunc = @(block_struct) min(block_struct.data,[],[1 2]);
             
             if self.SequenceState.frame == 0
-                minValue = blockproc(img,[self.A_r self.A_r], minFunc);
+                minValue = blockproc(img,[self.rA self.rA], minFunc);
                 minValue = reshape(minValue, [], 3);
                 L = mean(minValue,2);
                 predA = minValue(L==max(L),:);
@@ -69,7 +69,7 @@ classdef (Sealed) CaiDehazer < BaseDehazer
                 % as the original function used here (A compiled C++ function) gave different results. However the 
                 % the results for matlab's imboxfilt were consistent with the original. Using this removes the optimized
                 % C++ code to make it slightly more of a fair speed comparison
-                uD = imboxfilt(D,self.D_r*2+1); 
+                uD = imboxfilt(D,self.r*2+1); 
                 
                 self.SequenceState.dBuff = cat(3,D,D,D);
                 self.SequenceState.udBuff = cat(3,uD,uD,uD);
@@ -92,7 +92,7 @@ classdef (Sealed) CaiDehazer < BaseDehazer
                 else
                     D = min(img,[],3);
                     D = imresize(D, 1/self.downsample, 'nearest');        
-                    uD = imboxfilt(D,self.D_r*2+1); % NOTE: This function is used instead of using BaseDehazer.windowSumFunction / denominator because this handles edges differently. The difference in speed is very small.
+                    uD = imboxfilt(D,self.r*2+1); % NOTE: As mentioned before, this function is used instead of using BaseDehazer.windowSumFunction / denominator because this handles edges differently. The difference in speed is very small.
                     self.SequenceState.prevGray = rgb2gray(img);
                     self.SequenceState.prevFrame = img;
                 end
@@ -114,7 +114,7 @@ classdef (Sealed) CaiDehazer < BaseDehazer
                 if isempty(img)
                     predA = self.SequenceState.A;
                 else
-                    minValue = blockproc(img,[self.A_r self.A_r], minFunc);
+                    minValue = blockproc(img,[self.rA self.rA], minFunc);
                     minValue = reshape(minValue, [], 3);
                     L = mean(minValue,2);
                     A = minValue(L==max(L),:);
@@ -136,17 +136,17 @@ classdef (Sealed) CaiDehazer < BaseDehazer
     
     methods (Access = private)
         function [ refined, w, b ] = STMRF(self, img)
-            r = self.D_r*2+1;
+            winSize = self.r*2+1;
             V = imresize(img, 1/self.downsample, 'nearest');
-            uV = imboxfilt(V,r);
-            uVV = imboxfilt(V.*V, r);
-            uVD_t = imboxfilt(self.SequenceState.dBuff.*V, r);
+            uV = imboxfilt(V,winSize);
+            uVV = imboxfilt(V.*V, winSize);
+            uVDT = imboxfilt(self.SequenceState.dBuff.*V, winSize);
 
-            numerator = sum((uVD_t-(uV.*self.SequenceState.udBuff)).*self.lambda_t,3);
+            numerator = sum((uVDT-(uV.*self.SequenceState.udBuff)).*self.lambda,3);
             denominator = uVV - uV.^2;
 
             w = numerator ./ (denominator + self.eps);
-            b = sum(self.SequenceState.udBuff.*self.lambda_t,3)-w .* uV;
+            b = sum(self.SequenceState.udBuff.*self.lambda,3)-w .* uV;
 
             w = imresize(w, [size(img, 1), size(img, 2)], 'bilinear');
             b = imresize(b, [size(img, 1), size(img, 2)], 'bilinear');

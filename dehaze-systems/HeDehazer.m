@@ -9,19 +9,19 @@ classdef (Sealed) HeDehazer < BaseDehazer
     properties (SetAccess = private)
         % Defaults from paper
         omega       = 0.95;
-        win_size    = 15;
-        r           = 20;
+        winSize    = 15;
+        rGF           = 20;
         eps         = 0.001;
         t0          = 0.1;
     end
     
     methods
-        function self = HeDehazer(omega, win_size, r, eps, t0)
+        function self = HeDehazer(omega, winSize, rGF, eps, t0)
             self = self@BaseDehazer;
             
             if nargin>0 && ~isempty(omega), self.omega = omega; end
-            if nargin>1 && ~isempty(win_size), self.win_size = win_size; end
-            if nargin>2 && ~isempty(r), self.r = r; end
+            if nargin>1 && ~isempty(winSize), self.winSize = winSize; end
+            if nargin>2 && ~isempty(rGF), self.rGF = rGF; end
             if nargin>3 && ~isempty(eps), self.eps = eps; end
             if nargin>4 && ~isempty(t0), self.t0 = t0; end
             
@@ -34,7 +34,7 @@ classdef (Sealed) HeDehazer < BaseDehazer
             ATic = tic;
 
             darkChannel = min(img,[],3);
-            se = strel('square', self.win_size);
+            se = strel('square', self.winSize);
             darkChannel = imerode(darkChannel,se);
 
             nPixels = m * n;
@@ -55,7 +55,7 @@ classdef (Sealed) HeDehazer < BaseDehazer
 
             transEst = 1 - self.omega * darkChannel;
 
-            x = BaseDehazer.guidedFilter(rgb2gray(img), transEst, self.r, self.eps);
+            x = BaseDehazer.guidedFilter(rgb2gray(img), transEst, self.rGF, self.eps);
 
             predT = reshape(x, m, n);
             clampedTransmission = max(predT, self.t0);

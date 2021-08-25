@@ -34,7 +34,8 @@ function labelScatter(table, metricX, metricY, ignore, type)
     
     fullCols = cat(1,existingCols,myCols);
     
-    names = append(string(table.Row)," et al.");
+    names = table.Row;
+%     names = append(string(table.Row)," et al.");
     
     cols = fullCols(1:length(names),:);
     

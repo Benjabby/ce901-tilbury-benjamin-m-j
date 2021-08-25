@@ -27,11 +27,13 @@ function imageCollage(dehazers,path,frameNum)
             imgs(:,:,:,i) = dehazer.dehazeFrame(I);
         end
         
-        imwrite(imgs(:,:,:,i),append("T:\ce901_tilbury_benjamin_m_j\machineA-local-only\dehaze-evaluation\tests\figs\",dehazer.Name,".png"));
+%         imwrite(imgs(:,:,:,i),append("T:\ce901_tilbury_benjamin_m_j\machineA-local-only\dehaze-evaluation\tests\figs\",dehazer.Name,".png"));
         
         i = i + 1;
     end
     
-    figure;montage(imgs,'Size', [5, 2],'ThumbnailSize',[200,Inf]);
+%     imwrite(imtile(imgs,'GridSize',[13, NaN],'ThumbnailSize',[220,Inf],'BackgroundColor', [1 1 1], 'BorderSize',[4,0]),"T:\ce901_tilbury_benjamin_m_j\machineA-local-only\dehaze-evaluation\tests\figs\compFull2.png")
+    
+    figure;montage(imgs,'Size', [5,1],'ThumbnailSize',[220,Inf]);
 end
 
