@@ -1,6 +1,6 @@
 function saveVideos(systems, path, outPath)
 
-    saveIJ = (nargin==0);
+    saveIJ = (nargin==0 || isempty(systems));
         
     if ~exist('path','var')
         path = "haze-video-dataset\dataset";
@@ -14,6 +14,11 @@ function saveVideos(systems, path, outPath)
     dateFolders = dateFolders([dateFolders.isdir]);
 
     remainingSequences = 0;
+    
+    fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
+    S = textscan(fid,"%s");
+    sequences = string(S{1});
+    fclose(fid);
 
     for i = 3:length(dateFolders)
         dateName = dateFolders(i).name;
@@ -22,8 +27,12 @@ function saveVideos(systems, path, outPath)
 
         sequenceFolders = dir(datePath);
         sequenceFolders = sequenceFolders([sequenceFolders.isdir]);
-
-        remainingSequences = remainingSequences + length(sequenceFolders) - 2;
+        
+        for j = 3:length(sequenceFolders)
+            sequenceName = sequenceFolders(j).name;
+            if ~any(strcmp(sequences,sequenceName)), continue;  end
+            remainingSequences = remainingSequences + 1;
+        end
 
     end
 
@@ -50,6 +59,8 @@ function saveVideos(systems, path, outPath)
         for j = 3:length(sequenceFolders)
             sequenceName = sequenceFolders(j).name;
             sequencePath = fullfile(datePath, sequenceName);
+            
+            if ~any(strcmp(sequences,sequenceName)), continue;  end
 
             fid = fopen(fullfile(sequencePath,'haze','props.json'));
             if fid<0
@@ -94,15 +105,18 @@ function saveVideos(systems, path, outPath)
             sequencePath = seqTab(irow,:).path;
             IPath = fullfile(sequencePath,'haze','image');
             JPath = fullfile(sequencePath,'image_02','data');
+            ISize = length(dir(IPath))-2;
             
             for frameID = 0:ISize-1
                 framePath = num2str(frameID,'%010.f')+".png";
                 I = imread(fullfile(IPath,framePath));
                 I = im2double(I);
+                I = imresize(I, [375, 1242],'bilinear');
                 writeVideo(IWriter,I);
 
                 J = imread(fullfile(JPath,framePath));
                 J = im2double(J);
+                J = imresize(J, [375, 1242],'bilinear');
                 writeVideo(JWriter,J);
 
                 textwaitbar(frameID,ISize,"Creating Videos")
@@ -131,7 +145,6 @@ function saveVideos(systems, path, outPath)
                     I = im2double(I);
                     pred = system.dehazeFrame(I);
                     if frameID-system.FrameDelay>=0
-                        
                         pred = imresize(pred, [375, 1242],'bilinear');
                         writeVideo(writer,pred);
                     end
