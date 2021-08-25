@@ -507,7 +507,7 @@ function [results, systems, metrics, sequences, autosave, sample, seed] = valida
 
     if ~isfield(params,'Sequences') || isempty(params.Sequences)
         % Use only the dataset's subset of KITTI data 
-        fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-video-dataset","haze-subset.txt"));
+        fid = fopen(fullfile(fileparts(mfilename('fullpath')),"..","haze-subset.txt"));
         S = textscan(fid,"%s");
         sequences = string(S{1});
         fclose(fid);

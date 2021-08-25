@@ -29,7 +29,7 @@ parser.add_argument('--path', type=str, default='./dataset', metavar='str', help
 #parser.add_argument('--ftype',type=str, default='both',choices=['img','mat','both'], help='Whether to save using images, matlab files or both')
 #parser.add_argument("-mat", help='If a required map is not found as an .mat file a new one will be generated instead of loading from an image', action='store_true')
 
-parser.add_argument("-clean", help='Deletes unnecessary KITTI files', action='store_true')
+parser.add_argument("--clean",type=int, default=-1, help='Deletes unnecessary KITTI files. Use 0 to remove anything not needed to generated the dataset or run the evaluation. Use 1 to remove anything not needed to run the evaluation')
 parser.add_argument("-override", help='Replace any existing masks or depth maps', action='store_true')
 parser.add_argument("-skip_heatmaps", help="Don't save KITTI style disparity images for any depth maps", action='store_true')
                     
@@ -373,7 +373,7 @@ def build_requirements_list(args):
     drives = os.listdir(args.path)
     for drive in drives:
         drive_path = os.path.join(data_path,drive)
-
+        if os.path.isfile(drive_path): continue
         folders = os.listdir(drive_path)
         for folder in folders:
             folder_path = os.path.join(drive_path,folder)
@@ -465,7 +465,7 @@ if __name__ == '__main__':
 
     if not components:
         print("Nothing to generate")
-        if args.clean:
+        if args.clean>-1:
             print("Cleaning only")
         else:
             exit(0)
@@ -474,7 +474,7 @@ if __name__ == '__main__':
     for component in components:
         instances[component] = helper['init'][component](args)
 
-    if args.clean:
+    if args.clean>-1:
         print("Cleaning will delete files, are you sure? [y]")
         if input().lower() != 'y':
             exit(0)
@@ -485,7 +485,8 @@ if __name__ == '__main__':
     for drive in drives:
         drive_path = os.path.join(data_path,drive)
         args.current_drive = drive_path
-        
+        if os.path.isfile(drive_path): continue
+
         folders = os.listdir(drive_path)
         for folder in folders:
             folder_path = os.path.join(drive_path,folder)
@@ -499,11 +500,12 @@ if __name__ == '__main__':
             
             contents = os.listdir(folder_path)
 
-            if args.clean:
+            if args.clean>-1:
+                keeps = ['image_02','haze','sky_mask'] if args.clean==1 else ['image_02','image_03','haze','sky_mask','depth']
                 for content in contents:
-                    if content in ['image_02','image_03','proj_depth','sky_mask','depth']: continue
-                    #print("{} would be removed".format(os.path.join(folder_path,content)))
-                    shutil.rmtree(os.path.join(folder_path,content))
+                    if content in keeps: continue
+                    print("{} would be removed".format(os.path.join(folder_path,content)))
+                    #shutil.rmtree(os.path.join(folder_path,content))
 
             if not missings[folder]: continue
             

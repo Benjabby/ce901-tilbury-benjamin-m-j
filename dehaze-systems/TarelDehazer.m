@@ -56,30 +56,22 @@ classdef (Sealed) TarelDehazer < BaseDehazer
             if (self.balance==0.0) % global white balance on clear pixels
                 w=min(img,[],3); 
                 ival = quantile(w(:),.99);
-                [rind,cind]=find(w>=ival);
-                sel(:,1)=img(sub2ind(size(img),rind,cind,ones(size(rind))));
-                sel(:,2)=img(sub2ind(size(img),rind,cind,2*ones(size(rind))));
-                sel(:,3)=img(sub2ind(size(img),rind,cind,3*ones(size(rind))));
-                white=mean(sel,1);
-                white=white./max(white);
-                img(:,:,1)=img(:,:,1)./white(1);
-                img(:,:,2)=img(:,:,2)./white(2);
-                img(:,:,3)=img(:,:,3)./white(3);
+                mask = w>=ival;
+                mask = repmat(mask, 1,1,3);
+                sel = reshape(img(mask),[],3);
+                white = mean(sel,1);
+                white = white./max(white);
+                white = reshape(white, [1 1 3]);
+                img = img./white;
             elseif (self.balance>0.0) % local white balance
                 fo(:,:,1)=medfilt2(img(:,:,1), [self.sv, self.sv], 'symmetric');
                 fo(:,:,2)=medfilt2(img(:,:,2), [self.sv, self.sv], 'symmetric');
                 fo(:,:,3)=medfilt2(img(:,:,3), [self.sv, self.sv], 'symmetric');
                 nbfo=mean(fo,3);
-                fo(:,:,1)=(fo(:,:,1)./nbfo).^self.balance;
-                fo(:,:,2)=(fo(:,:,2)./nbfo).^self.balance;
-                fo(:,:,3)=(fo(:,:,3)./nbfo).^self.balance;
+                fo = (fo./nbfo).^self.balance;
                 nbfo=mean(fo,3);
-                fo(:,:,1)=fo(:,:,1)./nbfo;
-                fo(:,:,2)=fo(:,:,2)./nbfo;
-                fo(:,:,3)=fo(:,:,3)./nbfo;
-                img(:,:,1)=img(:,:,1)./fo(:,:,1);
-                img(:,:,2)=img(:,:,2)./fo(:,:,2);
-                img(:,:,3)=img(:,:,3)./fo(:,:,3);
+                fo = fo./nbfo;
+                img = img./fo;
             end
             % compute photometric bound
             w=min(img,[],3); 
@@ -101,31 +93,25 @@ classdef (Sealed) TarelDehazer < BaseDehazer
 
             % restoration with inverse Koschmieder's law
             factor=1.0./(1.0-v);
-            r=zeros(size(img));
+            recovered=zeros(size(img));
             if (ncol==1) 
-                r=(img-v).*factor; 
+                recovered=(img-v).*factor; 
                 %nbr=r;
             end
             if (ncol==3) 
-                r(:,:,1)= (img(:,:,1)-v).*factor; 
-                r(:,:,2)= (img(:,:,2)-v).*factor; 
-                r(:,:,3)= (img(:,:,3)-v).*factor; 
+                recovered = (img-v).*factor; 
                 % restore original light colors
                 if (self.balance==0.0) 
-                    r(:,:,1)=r(:,:,1).*white(1);
-                    r(:,:,2)=r(:,:,2).*white(2);
-                    r(:,:,3)=r(:,:,3).*white(3);
+                    recovered = recovered.*white;
                 end
                 if (self.balance>0.0) 
-                    r(:,:,1)=r(:,:,1).*fo(:,:,1);
-                    r(:,:,2)=r(:,:,2).*fo(:,:,2);
-                    r(:,:,3)=r(:,:,3).*fo(:,:,3);
+                    recovered = recovered.*fo;
                 end
                 %nbr=mean(r,3);
             end
             
             % final gamma correction 
-            u=r.^(1.0/self.gfactor);
+            u=recovered.^(1.0/self.gfactor);
 
             % final tone mapping for a gray level between O and 1
             mnbu=max(u(:));
