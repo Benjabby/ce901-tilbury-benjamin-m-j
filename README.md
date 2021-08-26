@@ -16,29 +16,29 @@ Ref		Structure							Description
 		dehaze-evaluation					Contains code for the evaluation of dehazing systems
 		├─ 3rd-party						Contains 3rd party tools for evaluation.
 [1, 2]		│   ├─ SpEED-QA						3rd-Party code for the SpEED-QA evaluator
-[3, 4]		│   ├─ FADE							3rd-Party code for the FADE evaluator
-[5]		│   └─ loadCalibrationCamToCam.m	3rd-Party code for reading KITTI calibration data
-		├─ old								Contains various old, currently unused code. Kept for attribution of effort
-		├─ evaluateDehazers.m				Code to evaluate dehazing systems.
-		├─ groupedResults.mat				Results on the evaluated dehazing systems, averaged and grouped by haze category.
+[3, 4]		│   ├─ FADE						3rd-Party code for the FADE evaluator
+[5]		│   └─ loadCalibrationCamToCam.m			3rd-Party code for reading KITTI calibration data
+		├─ old							Contains various old, currently unused code. Kept for attribution of effort
+		├─ evaluateDehazers.m					Code to evaluate dehazing systems.
+		├─ groupedResults.mat					Results on the evaluated dehazing systems, averaged and grouped by haze category.
 		├─ groupResults.m					Function to group results by category.
 		├─ imageCollage.m					Function to create a collage of dehazed images for given dehazing systems
 		├─ labelScatter.m					Function to plot labelled scatter graphs.
-		├─ normalisedScore.m				Function to normalise results.
+		├─ normalisedScore.m					Function to normalise results.
 		├─ plotScoring.m					Function to normalise and plot results.
 		├─ results.mat						Full results on the evaluated dehazing systems, grouped by sequence
 		└─ saveVideos.m						Function to save the video of a given dehazing system's results on the entire dataset.
 		dehaze-systems						Contains code for the implemented dehazing systems
 		├─ abstracts						Contains abstract base classes for dehazing systems
-[6, 7]		│   ├─ BaseDehazer.m				Abstract base class for all dehazing system. Includes guided filter  and window sum filter code.
-		│   └─ ExternalPythonDehazer.m		Abstract base class for external python dehazing systems.  (Windows Only)
+[6, 7]		│   ├─ BaseDehazer.m					Abstract base class for all dehazing system. Includes guided filter  and window sum filter code.
+		│   └─ ExternalPythonDehazer.m				Abstract base class for external python dehazing systems.  (Windows Only)
 		├─ neural-nets						Contains code for the neural network methods
-[8, 9]		│   ├─ AOD							Model definitions for AOD neural network
+[8, 9]		│   ├─ AOD						Model definitions for AOD neural network
 [10, 11]	│   ├─ PMHLD						Model definitions for PMHLD neural network
-		│   └─ pyinterfacer.py				Python program for interfacing with MATLAB to run the two neural network methods
-		├─ old								Contains various old, currently unused code. Kept for attribution of effort
+		│   └─ pyinterfacer.py					Python program for interfacing with MATLAB to run the two neural network methods
+		├─ old							Contains various old, currently unused code. Kept for attribution of effort
 		├─ optimise-params					Contains code to optimise the TilburyDehazer
-		│   ├─ optimise-tilbury.m			Code for running Bayesian optimisation on the TilburyDehazer
+		│   ├─ optimise-tilbury.m				Code for running Bayesian optimisation on the TilburyDehazer
 		│   └─ optims.mat					Results of the Bayesian optimisations
 [12-14]		├─ BermanDehazer.m					Dehazing system implementing Berman et al.'s method
 [15, 16]	├─ CaiDehazer.m						Dehazing system implementing Cai et al.'s method
@@ -49,18 +49,18 @@ Ref		Structure							Description
 		├─ TilburyDehazer.m					Proposed dehazing system containing different implementations of the smooth-extremum filter
 		├─ TsaiDehazer.m					Dehazing system implementing Tsai et al.'s method
 [21, 22]	├─ ZhuDehazer.m						Dehazing system implementing Zhu et al.'s CAP method
-		└─ UnrefinedDehazer.m				Dehazing system implementing He et al.'s DCP method without refinement.
+		└─ UnrefinedDehazer.m					Dehazing system implementing He et al.'s DCP method without refinement.
 		haze-video-dataset					Contains code for generating the haze video dataset.
-		├─ dataset							Default location for the haze dataset and KITTI data to be downloaded to. 
-[23]	│   └─ download_kitti.sh			3rd-Party script to download the required raw KITTI sequences automatically (Requires Bash shell)
+		├─ dataset						Default location for the haze dataset and KITTI data to be downloaded to. 
+[23]		│   └─ download_kitti.sh				3rd-Party script to download the required raw KITTI sequences automatically (Requires Bash shell)
 		├─ prep-tools						Default location to put repositories of components needed in the generation of the dataset.
 		├─ simplewrappers					Contains wrappers to interface with the 3rd-Party components required to generate the haze dataset.
-		│   ├─ simpleleastereo.py			Wrapper for running LEAStereo to generate depth maps
-		│   ├─ simplemanydepth.py			Wrapper for running ManyDepth to generate depth maps
-		│   ├─ simplemonodepth2.py			Wrapper for running MonoDepth2 to generate depth maps
-		│   └─ simpleskyar.py				Wrapper for running SkyAR to generate sky masks
+		│   ├─ simpleleastereo.py				Wrapper for running LEAStereo to generate depth maps
+		│   ├─ simplemanydepth.py				Wrapper for running ManyDepth to generate depth maps
+		│   ├─ simplemonodepth2.py				Wrapper for running MonoDepth2 to generate depth maps
+		│   └─ simpleskyar.py					Wrapper for running SkyAR to generate sky masks
 		├─ hazeutils.py						Contains code to generate hazy images
-		├─ hazegenerator.mlap				MATLAB app to preview hazy sequences
+		├─ hazegenerator.mlap					MATLAB app to preview hazy sequences
 		└─ kittiterator.py					A multifunctional program to iterate through the KITTI data. Generates the haze dataset.
 ````
 
