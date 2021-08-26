@@ -15,8 +15,8 @@ Ref		Structure							Description
 -----------------------------------------------------------------------------------
 		dehaze-evaluation					Contains code for the evaluation of dehazing systems
 		├─ 3rd-party						Contains 3rd party tools for evaluation.
-[1, 2]	│   ├─ SpEED-QA						3rd-Party code for the SpEED-QA evaluator
-[3, 4]	│   ├─ FADE							3rd-Party code for the FADE evaluator
+[1, 2]		│   ├─ SpEED-QA						3rd-Party code for the SpEED-QA evaluator
+[3, 4]		│   ├─ FADE							3rd-Party code for the FADE evaluator
 [5]		│   └─ loadCalibrationCamToCam.m	3rd-Party code for reading KITTI calibration data
 		├─ old								Contains various old, currently unused code. Kept for attribution of effort
 		├─ evaluateDehazers.m				Code to evaluate dehazing systems.
@@ -30,25 +30,25 @@ Ref		Structure							Description
 		└─ saveVideos.m						Function to save the video of a given dehazing system's results on the entire dataset.
 		dehaze-systems						Contains code for the implemented dehazing systems
 		├─ abstracts						Contains abstract base classes for dehazing systems
-[6, 7]	│   ├─ BaseDehazer.m				Abstract base class for all dehazing system. Includes guided filter  and window sum filter code.
+[6, 7]		│   ├─ BaseDehazer.m				Abstract base class for all dehazing system. Includes guided filter  and window sum filter code.
 		│   └─ ExternalPythonDehazer.m		Abstract base class for external python dehazing systems.  (Windows Only)
 		├─ neural-nets						Contains code for the neural network methods
-[8, 9] 	│   ├─ AOD							Model definitions for AOD neural network
-[10, 11]│   ├─ PMHLD						Model definitions for PMHLD neural network
+[8, 9]		│   ├─ AOD							Model definitions for AOD neural network
+[10, 11]	│   ├─ PMHLD						Model definitions for PMHLD neural network
 		│   └─ pyinterfacer.py				Python program for interfacing with MATLAB to run the two neural network methods
 		├─ old								Contains various old, currently unused code. Kept for attribution of effort
 		├─ optimise-params					Contains code to optimise the TilburyDehazer
 		│   ├─ optimise-tilbury.m			Code for running Bayesian optimisation on the TilburyDehazer
 		│   └─ optims.mat					Results of the Bayesian optimisations
-[12-14]	├─ BermanDehazer.m					Dehazing system implementing Berman et al.'s method
-[15, 16]├─ CaiDehazer.m						Dehazing system implementing Cai et al.'s method
+[12-14]		├─ BermanDehazer.m					Dehazing system implementing Berman et al.'s method
+[15, 16]	├─ CaiDehazer.m						Dehazing system implementing Cai et al.'s method
 		├─ ChenDehazer.m					Dehazing system wrapper for Chen et al.'s PMHLD method (Requires TensorFlow) (Windows Only)
-[17, 18]├─ HeDehazer.m						Dehazing system implementing He et al.'s DCP method using the guided filter.
+[17, 18]	├─ HeDehazer.m						Dehazing system implementing He et al.'s DCP method using the guided filter.
 		├─ LiDehazer.m						Dehazing system wrapper for Li et al.'s AOD neural network (Requires PyTorch) (Windows Only)
-[19, 20]├─ TarelDehazer.m					Dehazing system implementing Tarel et al.'s method
+[19, 20]	├─ TarelDehazer.m					Dehazing system implementing Tarel et al.'s method
 		├─ TilburyDehazer.m					Proposed dehazing system containing different implementations of the smooth-extremum filter
 		├─ TsaiDehazer.m					Dehazing system implementing Tsai et al.'s method
-[21, 22]├─ ZhuDehazer.m						Dehazing system implementing Zhu et al.'s CAP method
+[21, 22]	├─ ZhuDehazer.m						Dehazing system implementing Zhu et al.'s CAP method
 		└─ UnrefinedDehazer.m				Dehazing system implementing He et al.'s DCP method without refinement.
 		haze-video-dataset					Contains code for generating the haze video dataset.
 		├─ dataset							Default location for the haze dataset and KITTI data to be downloaded to. 
