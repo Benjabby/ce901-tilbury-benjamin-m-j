@@ -44,7 +44,7 @@
           <y:Geometry height="68.0" width="224.0" x="752.0" y="989.9999999999999"/>
           <y:Fill color="#CCCCFF" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" backgroundColor="#CCFFFF" fontFamily="Times New Roman" fontSize="12" fontStyle="plain" height="17.2890625" horizontalTextPosition="center" iconTextGap="4" lineColor="#000000" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="93.625" x="65.1875" xml:space="preserve" y="-21.2890625">Normalized Image</y:NodeLabel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" backgroundColor="#CCFFFF" fontFamily="Times New Roman" fontSize="12" fontStyle="plain" height="17.2890625" horizontalTextPosition="center" iconTextGap="4" lineColor="#000000" modelName="sandwich" modelPosition="n" textColor="#000000" verticalTextPosition="bottom" visible="true" width="92.96875" x="65.515625" xml:space="preserve" y="-21.2890625">Normalised Image</y:NodeLabel>
           <y:Image alphaImage="true" refid="1"/>
         </y:ImageNode>
       </data>
