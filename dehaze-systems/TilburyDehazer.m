@@ -1,37 +1,48 @@
 classdef (Sealed) TilburyDehazer < BaseDehazer
+% TILBURYDEHAZER
+% method:       The three different TilburyDehazer methods.
+%               Either 'local', 'global' or 'opening'. Defaults to 'local'.
+%               If any of the following parameters are not specified or empty
+%               the default will be the optimised value for the 'method'.
+%
+% alpha:        Peak factor for the SEF or ASELF. A higher value results in the filters acting more like an erosion/dilation filter.
+%  
+% gamma:        Transmission gamma correction factor.
+%
+% omega:        Proportion of haze to keep in the image for visual cues
+%
+% t0:           Lower bound for final transmission map
+%
+% r:            Radius of the SEF or ASELF filter
+%
+% rA:           Radius used in calculating the atmospheric light.
+%
+% rM:           With method=='local':   Radius of morphological gradient
+%               With method=='opening': Radius of smooth maximum
+%
+% alphaM:       With method=='opening': Peak factor for the smooth-dilation.
+%
 
     properties (Constant)
         FrameDelay  = 0;
         PredictsA   = true;
         PredictsT   = true;
-		
     end
     
     properties (SetAccess = private)
-        
-        %% Original values
-%         method      = 'masked';
-%         alpha       = 20;
-%         gamma      = 1.25;
-%         omega       = 0.95;
-%         t0          =  0.1;
-%         r           = 15;
-%         rA          = 30;
-%         rM          = 15;
-        %% Best optimised result
-        method      = 'local';
-        alpha       = 18.1283727963125;
-        gamma      = 1.28331033279787;
-        omega       = 0.944081856347016;
-        t0          = 0.122535149860325;
-        r           = 37;
-        rA          = 61;
-        rM          = 81;
-        alphaM      = 0; % Only used for 'opening' method
-		%%
-		minvd       = 50.0;
-		rc          = 1.65; 	  % camera height
-        vh          = 175;  % Assumption of horizon line for KITTI data
+        method = 'local';               %The three different TilburyDehazer methods. Either 'local', 'global' or 'opening'. Defaults to 'local'. If any of the following parameters are not specified or empty the default will be the optimised value for the 'method'.
+        alpha  = 10.1994823198406;      %Peak factor for the SEF or ASELF. A higher value results in the filters acting more like an erosion/dilation filter.
+        gamma  = 1.28476110308647;      %Transmission gamma correction factor.
+        omega  = 0.851134429960658;     %Proportion of haze to keep in the image for visual cues
+        t0     = 5.41478542049196e-05;  %Lower bound for final transmission map
+        r      = 42;                    %Radius of the SEF or ASELF filter
+        rA     = 39;                    %Radius used in calculating the atmospheric light.
+        rM     = 40;                    %With method=='local':   Radius of morphological gradient. With method=='opening': Radius of smooth maximum
+        alphaM = 0;                     %With method=='opening': Peak factor for the smooth-dilation.
+
+		minvd       = 50.0;             % Assumed minimum possible visibility.
+		rc          = 1.65;             % Height of the camera from the ground
+        vh          = 175;              % Assumption of horizon line location.
     end
     
     methods (Static)
@@ -43,21 +54,59 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
         
         function system = bestLocal
             %% Returns a Local type TilburyDehazer with the best found parameters
-            system = TilburyDehazer('local',10.1994823198406,1.28476110308647,0.851134429960658,5.41478542049196e-05,42,39,40);
-            system.rename("TilburyLocal");
-        end
-        
-        function system = bestOpening
-            %% Returns an Opening type TilburyDehazer with the best found parameters
-            system = TilburyDehazer('opening',23.8610032629807,1.27706489799881,0.957621936853399,0.183191485781434,37,46,41,5.59288358085337);
-            system.rename("TilburyOpening");
+            system = TilburyDehazer('local');
         end
         
         function system = bestGlobal
             %% Returns a Global type TilburyDehazer with the best found parameters
-            system = TilburyDehazer('global',7.21237201480562,1.28137736777996,0.909942155725948,0.160068556079595,40,43);
-            system.rename("TilburyGlobal");
+            system = TilburyDehazer('global');
         end
+        
+        function system = bestOpening
+            %% Returns an Opening type TilburyDehazer with the best found parameters
+            system = TilburyDehazer('opening');
+        end
+        
+
+        function params = bestLocalParams
+            params.method = 'local';
+            params.alpha  = 10.1994823198406;
+            params.gamma  = 1.28476110308647;
+            params.omega  = 0.851134429960658;
+            params.t0     = 5.41478542049196e-05;
+            params.r      = 42;
+            params.rA     = 39;
+            params.rM     = 40;
+            params.alphaM = 0; % not used
+            params.Name   = "TilburyLocal";
+        end
+           
+        function params = bestGlobalParams
+            params.method = 'global';
+            params.alpha  = 7.21237201480562;
+            params.gamma  = 1.28137736777996;
+            params.omega  = 0.909942155725948;
+            params.t0     = 0.160068556079595;
+            params.r      = 40;
+            params.rA     = 43;
+            params.rM     = 1; % not used
+            params.alphaM = 0; % not used
+            params.Name = "TilburyGlobal";
+        end
+        
+        function params = bestOpeningParams
+            params.method = 'opening';
+            params.alpha  = 23.8610032629807;
+            params.gamma  = 1.27706489799881;
+            params.omega  = 0.957621936853399;
+            params.t0     = 0.183191485781434;
+            params.r      = 37;
+            params.rA     = 46;
+            params.rM     = 41;
+            params.alphaM = 5.59288358085337;
+            params.Name   = "TilburyOpening";
+        end
+     
     end
     
     methods
@@ -68,17 +117,27 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
                 self.method = method;
             end
             
-            if nargin>1 && ~isempty(alpha), self.alpha = alpha; end
-            if nargin>2 && ~isempty(gamma), self.gamma = gamma; end
-            if nargin>3 && ~isempty(omega), self.omega = omega; end
-            if nargin>4 && ~isempty(t0), self.t0 = t0; end
-            if nargin>5 && ~isempty(r), self.r = r; end
-            if nargin>6 && ~isempty(rA), self.rA = rA; end
-            if nargin>7 && ~isempty(rM), self.rM = rM; end
-            if nargin>8 && ~isempty(alphaM), self.alphaM = alphaM; end
+            if self.method=="global"
+                proto = TilburyDehazer.bestGlobalParams;
+            elseif self.method=="opening"
+                proto = TilburyDehazer.bestOpeningParams;
+            else
+                proto = TilburyDehazer.bestLocalParams;
+            end
+            
+            self.rename(proto.Name);
+            
+            if nargin>1 && ~isempty(alpha), self.alpha = alpha;     else, self.alpha = proto.alpha; end
+            if nargin>2 && ~isempty(gamma), self.gamma = gamma;     else, self.gamma = proto.gamma; end
+            if nargin>3 && ~isempty(omega), self.omega = omega;     else, self.omega = proto.omega; end
+            if nargin>4 && ~isempty(t0), self.t0 = t0;              else, self.t0 = proto.t0; end
+            if nargin>5 && ~isempty(r), self.r = r;                 else, self.r = proto.r;  end
+            if nargin>6 && ~isempty(rA), self.rA = rA;              else, self.rA = proto.rA;  end
+            if nargin>7 && ~isempty(rM), self.rM = rM;              else, self.rM = proto.rM;  end
+            if nargin>8 && ~isempty(alphaM), self.alphaM = alphaM;  else, self.alphaM = proto.alphaM;  end
             if nargin>9 && ~isempty(minvd), self.minvd = minvd; end
             if nargin>10 && ~isempty(rc), self.rc = rc; end
-            if nargin>11 && ~isempty(vh), self.vh = vh; end
+            if nargin>11 && ~isempty(vh), self.vh = vh;  end
             
         end
         
@@ -179,39 +238,51 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
     methods (Access = private)
         
         function darkChannel = seGlobal(self, minChannel)
-            expD = exp(-self.alpha.*minChannel);
-
-            denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
+        %% Global Method (Fig.17)
+            darkChannel = TilburyDehazer.SEF(minChannel,self.r,-self.alpha);
         end
         
+        
         function darkChannel = seLocal(self, minChannel)
-            
+        %% Local Method (Fig.16)
+        
+            % Calculate morphological gradient as smoothing mask
             w = self.rM*2 + 1; % radius to window witdh;
             se = strel('square',w);
             ero = imerode(minChannel,se);
             dil = imdilate(minChannel,se);
-
-            V = self.alpha*(dil-ero);
-            expD = exp(-V.*minChannel);
-
-            denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
+            grad = dil-ero;
+            
+            darkChannel = TilburyDehazer.ASELF(minChannel,self.r,-self.alpha,grad);
         end
 
+        
         function darkChannel = seOpen(self, minChannel)
-            
+        %% Opening Method (Fig.18)
+        
             % Smooth minimum
-            expD = exp(-self.alpha.*minChannel);
-            denom = BaseDehazer.windowSumFilter(expD,self.r);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*minChannel,self.r)./denom;
+            darkChannel = TilburyDehazer.SEF(minChannel,self.r,-self.alpha);
             
             % Smooth maximum
-            expD = exp(self.alphaM.*darkChannel);
-            denom = BaseDehazer.windowSumFilter(expD,self.rM);
-            darkChannel = BaseDehazer.windowSumFilter(expD.*darkChannel,self.rM)./denom;
+            darkChannel = TilburyDehazer.SEF(darkChannel,self.rM,self.alphaM);
         end
 
     end
+    
+    methods (Static, Access=private)
+        
+        %% SEF (Algorithm 1)
+        function out = SEF(img, radius, alpha)
+            expD = exp(alpha.*img);
+            denom = BaseDehazer.windowSumFilter(expD,radius);
+            out = BaseDehazer.windowSumFilter(expD.*img,radius)./denom;
+        end
+        
+        %% ASELF (Algorithm 2)
+        function out = ASELF(img, radius, alpha, map)
+            expD = exp(map.*alpha.*img);
+            denom = BaseDehazer.windowSumFilter(expD,radius);
+            out = BaseDehazer.windowSumFilter(expD.*img,radius)./denom;
+        end
+    end
 end
-
