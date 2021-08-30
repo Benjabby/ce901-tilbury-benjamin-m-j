@@ -8,13 +8,13 @@ classdef (Sealed) TarelDehazer < BaseDehazer
     
     properties (SetAccess = private)
         % Defaults from paper except vh & rc
-        winSize     = 11;
-        omega       = 0.95;
-        balance     = -1;
-        gamma       = 1;
-        rc          = 1.65; % Multiplier based on height of KITTI cameras from the ground
-        minvd       = 50.0;
-        vh          = 175;  % Assumption of horizon line for KITTI data
+        winSize     = 11;   % Window size for the median filters
+        omega       = 0.95; % Proportion of haze to remove
+        balance     = -1;   % Image white balance. <0 for no white balance, 0 for global white balance, >0 for local white balance.
+        gamma       = 1;    % Image gamma correction factor
+        rc          = 1.65; % Height of the camera from the ground
+        minvd       = 50.0; % Assumed minimum possible visibility.
+        vh          = 175;  % Assumption of horizon line location.
          
     end
     

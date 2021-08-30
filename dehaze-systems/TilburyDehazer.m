@@ -7,11 +7,11 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
 %
 % alpha:        Peak factor for the SEF or ASELF. A higher value results in the filters acting more like an erosion/dilation filter.
 %  
-% gamma:        Transmission gamma correction factor.
+% gamma:        Transmission gamma correction factor. (Note; NOT image gamma correction)
 %
-% omega:        Proportion of haze to keep in the image for visual cues
+% omega:        Proportion of haze to remove from the image, leaving some in for visual cues
 %
-% t0:           Lower bound for final transmission map
+% t0:           Lower bound for transmission map
 %
 % r:            Radius of the SEF or ASELF filter
 %
@@ -22,6 +22,11 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
 %
 % alphaM:       With method=='opening': Peak factor for the smooth-dilation.
 %
+% minvd:        Assumed minimum possible visibility.
+%
+% rc:           Height of the camera from the ground
+%
+% vh:           Assumption of horizon line location.
 
     properties (Constant)
         FrameDelay  = 0;
@@ -30,15 +35,15 @@ classdef (Sealed) TilburyDehazer < BaseDehazer
     end
     
     properties (SetAccess = private)
-        method = 'local';               %The three different TilburyDehazer methods. Either 'local', 'global' or 'opening'. Defaults to 'local'. If any of the following parameters are not specified or empty the default will be the optimised value for the 'method'.
-        alpha  = 10.1994823198406;      %Peak factor for the SEF or ASELF. A higher value results in the filters acting more like an erosion/dilation filter.
-        gamma  = 1.28476110308647;      %Transmission gamma correction factor.
-        omega  = 0.851134429960658;     %Proportion of haze to keep in the image for visual cues
-        t0     = 5.41478542049196e-05;  %Lower bound for final transmission map
-        r      = 42;                    %Radius of the SEF or ASELF filter
-        rA     = 39;                    %Radius used in calculating the atmospheric light.
-        rM     = 40;                    %With method=='local':   Radius of morphological gradient. With method=='opening': Radius of smooth maximum
-        alphaM = 0;                     %With method=='opening': Peak factor for the smooth-dilation.
+        method = 'local';               % The three different TilburyDehazer methods. Either 'local', 'global' or 'opening'. Defaults to 'local'. If any of the following parameters are not specified or empty the default will be the optimised value for the 'method'.
+        alpha  = 10.1994823198406;      % Peak factor for the SEF or ASELF. A higher value results in the filters acting more like an erosion/dilation filter.
+        gamma  = 1.28476110308647;      % Transmission gamma correction factor.
+        omega  = 0.851134429960658;     % Proportion of haze to remove from the image, leaving some in for visual cues
+        t0     = 5.41478542049196e-05;  % Lower bound for final transmission map
+        r      = 42;                    % Radius of the SEF or ASELF filter
+        rA     = 39;                    % Radius used in calculating the atmospheric light.
+        rM     = 40;                    % With method=='local':   Radius of morphological gradient. With method=='opening': Radius of smooth maximum
+        alphaM = 0;                     % With method=='opening': Peak factor for the smooth-dilation.
 
 		minvd       = 50.0;             % Assumed minimum possible visibility.
 		rc          = 1.65;             % Height of the camera from the ground

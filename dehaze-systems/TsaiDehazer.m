@@ -8,24 +8,24 @@ classdef (Sealed) TsaiDehazer < BaseDehazer
     
     properties (SetAccess = private)
         % Defaults from paper
-        AThresh = 0.85;
-        skyThresh = 0.6;
-        skyLim = 0.3;
-        ADiffThresh = 5.0/255;
-        AUpdate = 0.95;
-        r_min = 7;
-        r_mean = 28;
-        eps = 0.001;
-        t0 = 0.1;
-        omega = 0.95;
+        AThresh     = 0.85;     % Brightness threshold for considering a pixel in atmospheric light estimation
+        skyThresh   = 0.6;      % Threshold for considering a region as sky
+        skyLim      = 0.3;      % Minimum transmission for regions identified as sky.
+        ADiffThresh = 5.0/255;  % Threshold for change in atmospheric light brightness to not update
+        AUpdate     = 0.95;     % Atmospheric light update factor
+        rMin        = 7;        % Erosion filter radius
+        rGF         = 28;       % Guided filter radius
+        eps         = 0.001;    % Epsilon (error preventing small value) for the guided filter
+        t0          = 0.1;      % Lower bound for transmission map
+        omega       = 0.95;     % Proportion of haze to remove
     end
     
     methods
-        function self = TsaiDehazer(omega, r_min, eps, t0, AThresh, skyThresh, skyLim, ADiffThresh, AUpdate)
+        function self = TsaiDehazer(omega, rMin, eps, t0, AThresh, skyThresh, skyLim, ADiffThresh, AUpdate)
             self = self@BaseDehazer;
             
             if nargin>0 && ~isempty(omega), self.omega = omega; end
-            if nargin>1 && ~isempty(r_min), self.r_min = r_min; self.r_mean = 4*r_min; end
+            if nargin>1 && ~isempty(rMin), self.rMin = rMin; self.rGF = 4*rMin; end
             if nargin>2 && ~isempty(eps), self.eps = eps; end
             if nargin>3 && ~isempty(t0), self.t0 = t0; end
             if nargin>4 && ~isempty(AThresh), self.AThresh = AThresh; end
@@ -69,7 +69,7 @@ classdef (Sealed) TsaiDehazer < BaseDehazer
             [m, n, ~] = size(img);
     
             predTic = tic;
-            se = strel('square',self.r_min);
+            se = strel('square',self.rMin);
             repAtmosphere = repmat(predA, m, n);
             normed = img ./ repAtmosphere;
             darkChannel = min(normed,[],3);
@@ -77,20 +77,20 @@ classdef (Sealed) TsaiDehazer < BaseDehazer
             transEst = 1 - self.omega * darkChannel;
 
 
-            avgDenom = BaseDehazer.windowSumFilter(ones(m, n), self.r_mean);
-            mean_g = BaseDehazer.windowSumFilter(gray, self.r_mean) ./ avgDenom;
-            corr_gg = BaseDehazer.windowSumFilter(gray .* gray, self.r_mean) ./ avgDenom;
+            avgDenom = BaseDehazer.windowSumFilter(ones(m, n), self.rGF);
+            mean_g = BaseDehazer.windowSumFilter(gray, self.rGF) ./ avgDenom;
+            corr_gg = BaseDehazer.windowSumFilter(gray .* gray, self.rGF) ./ avgDenom;
             var_g = corr_gg - mean_g .* mean_g;
             mask = (mean_g-var_g)>self.skyThresh; % create a skymask from the grayscale guide image
             transEst(mask & transEst<self.skyLim) = self.skyLim;
 
-            mean_t = BaseDehazer.windowSumFilter(transEst, self.r_mean) ./ avgDenom;
-            corr_gt = BaseDehazer.windowSumFilter(gray .* transEst, self.r_mean) ./ avgDenom;
+            mean_t = BaseDehazer.windowSumFilter(transEst, self.rGF) ./ avgDenom;
+            corr_gt = BaseDehazer.windowSumFilter(gray .* transEst, self.rGF) ./ avgDenom;
             cov_gt = corr_gt - mean_g .* mean_t;
             a = cov_gt ./ (var_g + self.eps);
             b = mean_t - a .* mean_g;
-            mean_a = BaseDehazer.windowSumFilter(a, self.r_mean) ./ avgDenom;
-            mean_b = BaseDehazer.windowSumFilter(b, self.r_mean) ./ avgDenom;
+            mean_a = BaseDehazer.windowSumFilter(a, self.rGF) ./ avgDenom;
+            mean_b = BaseDehazer.windowSumFilter(b, self.rGF) ./ avgDenom;
 
             x = mean_a .* gray + mean_b;
             predT = reshape(x, m, n);

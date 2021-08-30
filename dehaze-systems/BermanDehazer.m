@@ -13,17 +13,17 @@ classdef (Sealed) BermanDehazer < BaseDehazer
         % Defaults from paper except for N and K
         
         %% Atmospheric light estimation parameters
-        thres       = 0.02;
-        spacing     = 0.02;
-        N           = 1000;
-        K           = 40;
-        Amin        = [0,0.05,0.1];
-        Amax        = [1,1,1];
+        thres       = 0.02;             % Threshold for accepting an atmospheric light colour
+        spacing     = 0.02;             % Spacing of atmospheric light colours to check
+        N           = 1000;             % Number of colour clusters
+        K           = 40;               % Number of colour directions to check
+        Amin        = [0,0.05,0.1];     % Lower bound for the atmospheric light
+        Amax        = [1,1,1];          % Upper bound for the atmospheric light
         %% Dehazing parameters
-        gamma       = 1;
-        lambda      = 0.1;
-        omega       = 1.06;
-        t0          = 0.1;
+        gamma       = 1;                % Image gamma correction factor.
+        lambda      = 0.1;              % Degree of transmission map smoothing
+        omega       = 1.06;             % Proportion of haze to leave. Functions differently from other omega parameters. Values larger than 1 retain more haze
+        t0          = 0.1;              % Lower bound for transmission map
     end
     
     methods

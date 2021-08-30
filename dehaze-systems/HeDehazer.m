@@ -8,11 +8,11 @@ classdef (Sealed) HeDehazer < BaseDehazer
     
     properties (SetAccess = private)
         % Defaults from paper
-        omega       = 0.95;
-        winSize    = 15;
-        rGF           = 20;
-        eps         = 0.001;
-        t0          = 0.1;
+        omega       = 0.95;     % Proportion of haze to remove
+        winSize     = 15;       % Window size of the erosion filters
+        rGF         = 20;       % Radius of the guided filter
+        eps         = 0.001; 	% Epsilon (error preventing small value) for the guided filter
+        t0          = 0.1;      % Lower bound for transmission map
     end
     
     methods

@@ -7,16 +7,16 @@ classdef (Sealed) CaiDehazer < BaseDehazer
     end
     properties (SetAccess = private)
         % Defaults from paper & original code (paper params supersede code params)
-        omega       = 0.7;
-        t0          = 0.1;
-        r         = 20;
-        eps         = 0.0001;
-        f           = 1;
-        rho         = 0.1;
-        rA         = 15;
-        downsample  = 1;
+        omega       = 0.7;      % Proportion of haze to remove
+        t0          = 0.1;      % Lower bound for transmission map
+        r           = 20;       % Spatial radius of the spatio-temporal MRF
+        eps         = 0.0001;   % Epsilon (error preventing small value) for spatio-temporal MRF
+        f           = 1;        % Number of adjacent frames to use (temporal radius of the spatio-temporal MRF)
+        rho         = 0.1;      % Atmospheric light update factor
+        rA          = 15;       % Radius for the erosion filter used in estimating atmospheric light
+        downsample  = 1;        % Downsample ratio.
         
-        lambda;
+        lambda;                 % Temporal window weights. Derived from f.
     end
     
     methods
