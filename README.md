@@ -9,16 +9,30 @@ This repository is comprised of three main sections;
 
 For more information see the README files inside each folder. 
 
+# General Requirements
+
+*  MATLAB 2021a (Older versions may work) 
+	* The following MATLAB Toolboxes:
+		* Control System Toolbox
+		* Signal Processing Toolbox
+		* Mapping Toolbox
+		* Image Processing Toolbox
+		* Statistics and Machine Learning Toolbox
+	* The following MATLAB Add-ons:
+		* [Text Wait/Progress Bar by Xiaoxuan He](https://www.mathworks.com/matlabcentral/fileexchange/71638-text-wait-progress-bar)
+* Python 3
+* Windows OS is recommended, as `ChenDehazer` and `LiDehazer` require the Windows only .NET Framework. Everything else can be done on a Unix OS
 # Code Overview and References
 ````
 Ref		Structure							Description
 -----------------------------------------------------------------------------------
-		dehaze-evaluation					Contains code for the evaluation of dehazing systems
-		├─ 3rd-party						Contains 3rd party tools for evaluation.
+		dehaze-evaluation					Folder containing  code for the evaluation of dehazing systems
+		├─ 3rd-party						Folder containing  3rd party tools for evaluation.
 [1, 2]		│   ├─ SpEED-QA						3rd-Party code for the SpEED-QA evaluator
 [3, 4]		│   ├─ FADE						3rd-Party code for the FADE evaluator
 [5]		│   └─ loadCalibrationCamToCam.m			3rd-Party code for reading KITTI calibration data
-		├─ old							Contains various old, currently unused code. Kept for attribution of effort
+		├─ old							Folder containing  various old, currently unused code. Kept for attribution of effort
+		├─ example-results					Folder containing  small sample of image results for each dehazing
 		├─ evaluateDehazers.m					Code to evaluate dehazing systems.
 		├─ groupedResults.mat					Results on the evaluated dehazing systems, averaged and grouped by haze category.
 		├─ groupResults.m					Function to group results by category.
@@ -28,16 +42,16 @@ Ref		Structure							Description
 		├─ plotScoring.m					Function to normalise and plot results.
 		├─ results.mat						Full results on the evaluated dehazing systems, grouped by sequence
 		└─ saveVideos.m						Function to save the video of a given dehazing system's results on the entire dataset.
-		dehaze-systems						Contains code for the implemented dehazing systems
-		├─ abstracts						Contains abstract base classes for dehazing systems
+		dehaze-systems						Folder containing  code for the implemented dehazing systems
+		├─ abstracts						Folder containing  abstract base classes for dehazing systems
 [6, 7]		│   ├─ BaseDehazer.m					Abstract base class for all dehazing system. Includes guided filter  and window sum filter code.
 		│   └─ ExternalPythonDehazer.m				Abstract base class for external python dehazing systems.  (Windows Only)
-		├─ neural-nets						Contains code for the neural network methods
-[8, 9]		│   ├─ AOD						Model definitions for AOD neural network
-[10, 11]	│   ├─ PMHLD						Model definitions for PMHLD neural network
+		├─ neural-nets						Folder containing  code for the neural network methods
+[8, 9]		│   ├─ AOD						Folder containing model definitions for AOD neural network
+[10, 11]	│   ├─ PMHLD						Folder containing model definitions for PMHLD neural network
 		│   └─ pyinterfacer.py					Python program for interfacing with MATLAB to run the two neural network methods
-		├─ old							Contains various old, currently unused code. Kept for attribution of effort
-		├─ optimise-params					Contains code to optimise the TilburyDehazer
+		├─ old							Folder containing  various old, currently unused code. Kept for attribution of effort
+		├─ optimise-params					Folder containing  code to optimise the TilburyDehazer
 		│   ├─ optimise-tilbury.m				Code for running Bayesian optimisation on the TilburyDehazer
 		│   └─ optims.mat					Results of the Bayesian optimisations
 [12-14]		├─ BermanDehazer.m					Dehazing system implementing Berman et al.'s method
@@ -50,18 +64,20 @@ Ref		Structure							Description
 		├─ TsaiDehazer.m					Dehazing system implementing Tsai et al.'s method
 [21, 22]	├─ ZhuDehazer.m						Dehazing system implementing Zhu et al.'s CAP method
 		└─ UnrefinedDehazer.m					Dehazing system implementing He et al.'s DCP method without refinement.
-		haze-video-dataset					Contains code for generating the haze video dataset.
+		haze-video-dataset					Folder containing  code for generating the haze video dataset.
 		├─ dataset						Default location for the haze dataset and KITTI data to be downloaded to. 
 [23]		│   └─ download_kitti.sh				3rd-Party script to download the required raw KITTI sequences automatically (Requires Bash shell)
 		├─ prep-tools						Default location to put repositories of components needed in the generation of the dataset.
-		├─ simplewrappers					Contains wrappers to interface with the 3rd-Party components required to generate the haze dataset.
+		├─ simplewrappers					Folder containing  wrappers to interface with the 3rd-Party components.
 		│   ├─ simpleleastereo.py				Wrapper for running LEAStereo to generate depth maps
 		│   ├─ simplemanydepth.py				Wrapper for running ManyDepth to generate depth maps
 		│   ├─ simplemonodepth2.py				Wrapper for running MonoDepth2 to generate depth maps
 		│   └─ simpleskyar.py					Wrapper for running SkyAR to generate sky masks
-		├─ hazeutils.py						Contains code to generate hazy images
+		├─ hazeutils.py						Code to generate hazy images
 		├─ hazegenerator.mlap					MATLAB app to preview hazy sequences
 		└─ kittiterator.py					A multifunctional program to iterate through the KITTI data. Generates the haze dataset.
+		figures 							Folder containing  figures used in the dissertation paper.
+		haze-subset.txt						List of KITTI sequences in the haze dataset. By default, any other sequences encountered are ignored.
 ````
 
 [1]	C. G. Bampis, P. Gupta, R. Soundararajan, and A. C. Bovik. (2017, Accessed: 26/08/2021). SpEED-QA Software Release. Available: https://github.com/christosbampis/SpEED-QA_release
