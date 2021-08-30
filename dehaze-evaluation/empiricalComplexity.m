@@ -1,5 +1,9 @@
 function [timings, sizes] = empiricalComplexity(dehazers, path, seed)
-    
+% This function was going to be expanded significantly to fit coefficients
+% to the empirically observed run times, but they all turned out to be
+% linear... So there wasn't really any point because if they're linear then
+% MPPS is completely sufficient to describe they're speed.
+
     if ~exist('seed','var')
         seed = 0;
     end

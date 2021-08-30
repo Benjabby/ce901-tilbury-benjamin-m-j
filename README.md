@@ -33,6 +33,7 @@ Ref		Structure							Description
 [5]		│   └─ loadCalibrationCamToCam.m			3rd-Party code for reading KITTI calibration data
 		├─ old							Folder containing  various old, currently unused code. Kept for attribution of effort
 		├─ example-results					Folder containing  small sample of image results for each dehazing
+		├─ empiricalComplexity.m				Plots the runtime of dehazers for various size inputs.
 		├─ evaluateDehazers.m					Code to evaluate dehazing systems.
 		├─ groupedResults.mat					Results on the evaluated dehazing systems, averaged and grouped by haze category.
 		├─ groupResults.m					Function to group results by category.
