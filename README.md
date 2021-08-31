@@ -77,7 +77,7 @@ Ref		Structure							Description
 		├─ hazeutils.py						Code to generate hazy images
 		├─ hazegenerator.mlap					MATLAB app to preview hazy sequences
 		└─ kittiterator.py					A multifunctional program to iterate through the KITTI data. Generates the haze dataset.
-		figures 							Folder containing  figures used in the dissertation paper.
+		figures 						Folder containing  figures used in the dissertation paper.
 		haze-subset.txt						List of KITTI sequences in the haze dataset. By default, any other sequences encountered are ignored.
 ````
 
