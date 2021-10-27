@@ -1,3 +1,5 @@
+Repository for my masters dissertation project.
+
 # Introduction
 This repository is comprised of three main sections;
 
